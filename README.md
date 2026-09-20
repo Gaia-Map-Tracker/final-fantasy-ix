@@ -94,8 +94,11 @@ từ máy chủ của họ. Máy chủ đó không trả header CORS nên trình
 lưu lại**: mỗi lần mở app là một lần tải, và ngoại tuyến thì không có bản đồ.
 Muốn chạy ngoại tuyến thì tải ảnh về, đặt vào `maps/world.png`.
 
-Một số trình duyệt (Safari khi mở bằng `file://`) chặn IndexedDB. Gặp trường hợp
-đó, app vẫn dùng được ảnh cho phiên đang mở và **nói rõ là lần sau phải chọn lại**.
+**Safari mở bằng `file://` thì không lưu được ảnh** — đã đo trên WebKit 26.6:
+mọi thứ khác chạy bình thường, riêng IndexedDB hỏng ở tầng giao dịch. Gặp trường
+hợp đó app vẫn dùng được ảnh cho phiên đang mở và **nói rõ là lần sau phải chọn
+lại**. Muốn ảnh sống qua các lần mở trên Safari: đặt file vào `maps/world.png`,
+hoặc chạy qua một web server thay vì mở thẳng file.
 
 ## Dữ liệu lưu ở đâu
 

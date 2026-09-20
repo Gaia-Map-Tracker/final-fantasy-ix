@@ -482,7 +482,15 @@ const persistE = () => save(K.edges, edges);
    nên đường lùi là: giữ ảnh trong RAM cho phiên đang mở và NÓI THẲNG với
    người dùng rằng lần sau phải chọn lại — im lặng để họ tưởng đã lưu mới
    là tệ. Mọi lỗi ở đây đều rơi về đường lùi đó, kể cả khi trình duyệt
-   treo không trả lời (có timeout). */
+   treo không trả lời (có timeout).
+
+   [ĐO 2026-09-20, WebKit 26.6 qua file://] Safari KHÔNG ném lỗi ở
+   indexedDB.open — open chạy qua bình thường, rồi GIAO DỊCH mới hỏng, và
+   tx.error khi đó là NULL. Nên đừng bỏ mấy chỗ "|| new Error(...)" bên
+   dưới: thiếu nó là reject(null), rồi err.message ở chỗ bắt lỗi ném tiếp
+   một TypeError, và người dùng mất luôn cái cảnh báo lẽ ra phải thấy.
+   Đo cùng lượt: app chạy đủ trên WebKit — 44 điểm, undo, nối bến tàu đều
+   bình thường; chỉ riêng lưu ảnh là không được, và đường lùi bắt đúng. */
 const IDB = {
   name:'mapatlas', store:'maps', broken:false, db:null,
   open(){
