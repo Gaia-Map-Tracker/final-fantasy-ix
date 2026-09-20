@@ -31,7 +31,24 @@ window.MAPGAMES.push({
      được đặt theo. Toạ độ lưu theo tỉ lệ 0–1 nên đổi độ phân giải vẫn
      đúng chỗ, nhưng đổi TỈ LỆ thì lệch hết. Đo từ ảnh gốc: 1400×1400. */
   maps: [
-    { id:'world', name:'Bản đồ thế giới', src:'maps/world.png', aspect:1.0 },
+    { id:'world', name:'Bản đồ thế giới', src:'maps/world.png', aspect:1.0,
+
+      /* Ảnh mặc định để người dùng bấm một nút là có bản đồ ngay, khỏi
+         phải tự đi tìm. KHÔNG tự tải khi mở app — người dùng bấm mới tải,
+         vì mỗi lần tải là một lượt xin băng thông của trang người ta.
+
+         [ĐO 2026-09-20] ảnh này 1400×1400, md5 b8e467c7… — ĐÚNG BẰNG ảnh
+         mà 44 toạ độ dưới đây được đặt theo, nên marker khớp tuyệt đối.
+         Cũng đo: máy chủ không trả header CORS ⇒ fetch() và canvas đều bị
+         chặn ⇒ KHÔNG cache được vào IndexedDB. Chọn ảnh này thì lần nào mở
+         app cũng phải tải lại, và ngoại tuyến là không có bản đồ. Muốn
+         chạy ngoại tuyến thì tải về đặt vào maps/world.png. */
+      remote: {
+        url:       'https://fantasyanime.com/finalfantasy/ff9/images/ff9worldmap.png',
+        source:    'fantasyanime.com',
+        sourceUrl: 'https://fantasyanime.com/finalfantasy/ff9/',
+        rights:    '© Square Enix',
+      } },
     // Thêm bản đồ khác ở đây, ví dụ:
     // { id:'alexandria', name:'Alexandria', src:'maps/alexandria.png' },
   ],

@@ -107,12 +107,29 @@ textarea{resize:vertical; min-height:62px}
 .clu .nm{flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .clu .ct{color:var(--muted); font-variant-numeric:tabular-nums}
 #fallback{
+  /* pointer-events:none để phần nền KHÔNG nuốt chuột — README hứa là chưa
+     có ảnh vẫn đặt và kéo marker bình thường, mà trước đây lớp phủ này
+     chặn sạch. Riêng hộp chữ ở giữa thì nhận chuột lại (xem bên dưới). */
+  pointer-events:none;
   position:absolute; inset:0; display:none; place-content:center; text-align:center;
   background:
     linear-gradient(135deg,#1b3b57,#14293c),
     repeating-linear-gradient(0deg,transparent 0 79px,rgba(255,255,255,.05) 79px 80px);
   color:#cfe3f5; padding:40px;
 }
+#fallback > div{ pointer-events:auto; max-width:520px }
+#fallback .row{ justify-content:center; margin-top:14px }
+#fallback .btn{
+  background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.3); color:#eaf4ff;
+}
+#fallback .btn:hover{ background:rgba(255,255,255,.2) }
+#fbCredit{ margin:12px 0 0; font-size:12px; opacity:.65; line-height:1.55 }
+#fbCredit a{ color:inherit }
+#fbNote{
+  margin:12px 0 0; font-size:12.5px; line-height:1.55;
+  border:1px solid rgba(255,255,255,.25); border-radius:8px; padding:9px 11px; display:none;
+}
+#fbNote.on{ display:block }
 
 .pin{
   position:absolute; width:28px; height:28px; margin:-14px 0 0 -14px;
@@ -213,6 +230,9 @@ textarea{resize:vertical; min-height:62px}
     <div class="sec">
       <label class="fld" for="mapSel">Bản đồ</label>
       <select id="mapSel"></select>
+      <div class="row" style="margin-top:7px">
+        <button class="btn" id="imgBtn">🖼 Ảnh bản đồ</button>
+      </div>
     </div>
 
     <div class="sec" style="position:relative">
@@ -256,6 +276,7 @@ textarea{resize:vertical; min-height:62px}
         <button class="btn danger" id="resetBtn">Xoá tiến độ</button>
       </div>
       <input type="file" id="impFile" accept="application/json" hidden>
+      <input type="file" id="imgFile" accept="image/*" hidden>
       <p class="hintline">Phím tắt: <b>/</b> tìm · <b>+ −</b> phóng · <b>0</b> vừa màn hình · <b>Esc</b> đóng</p>
     </div>
   </aside>
@@ -289,6 +310,14 @@ textarea{resize:vertical; min-height:62px}
         <div>
           <h2 style="margin:0 0 8px" id="fbTitle">Chưa có ảnh bản đồ</h2>
           <p style="margin:0; opacity:.8" id="fbText">Đặt ảnh vào <code>maps/world.png</code></p>
+          <div class="row" id="fbActions">
+            <button class="btn" id="fbPick">📁 Chọn ảnh từ máy</button>
+            <button class="btn" id="fbRemote">🌐 Dùng bản đồ mặc định</button>
+            <button class="btn" id="fbFile">📂 Ảnh trong maps/</button>
+            <button class="btn" id="fbClose">✕ Đóng</button>
+          </div>
+          <p id="fbCredit"></p>
+          <p id="fbNote"></p>
           <p style="margin:12px 0 0; opacity:.6; font-size:13px">Vẫn đặt và sửa marker bình thường được.</p>
         </div>
       </div>
@@ -419,6 +448,62 @@ function boot(){
 }
 const persist  = () => save(K.data, markers);
 const persistE = () => save(K.edges, edges);
+
+/* ================= ảnh bản đồ ================= */
+/* Ảnh người dùng tự chọn nặng vài MB — localStorage không chứa nổi, nên
+   lưu Blob vào IndexedDB, khoá theo "<game>:<bản đồ>".
+
+   Safari CHẶN IndexedDB khi mở bằng file://. Không có cách nào vòng qua,
+   nên đường lùi là: giữ ảnh trong RAM cho phiên đang mở và NÓI THẲNG với
+   người dùng rằng lần sau phải chọn lại — im lặng để họ tưởng đã lưu mới
+   là tệ. Mọi lỗi ở đây đều rơi về đường lùi đó, kể cả khi trình duyệt
+   treo không trả lời (có timeout). */
+const IDB = {
+  name:'mapatlas', store:'maps', broken:false, db:null,
+  open(){
+    if (this.db)     return Promise.resolve(this.db);
+    if (this.broken) return Promise.reject(new Error('IndexedDB không dùng được'));
+    return new Promise((res, rej) => {
+      const fail = e => { this.broken = true; rej(e instanceof Error ? e : new Error(String(e))); };
+      let rq;
+      try { rq = indexedDB.open(this.name, 1); } catch(e){ return fail(e); }
+      const t = setTimeout(() => fail(new Error('IndexedDB không trả lời')), 3000);
+      rq.onupgradeneeded = () => { try{ rq.result.createObjectStore(this.store); }catch{} };
+      rq.onsuccess = () => { clearTimeout(t); this.db = rq.result; res(this.db); };
+      rq.onerror   = () => { clearTimeout(t); fail(rq.error || new Error('mở IndexedDB lỗi')); };
+      rq.onblocked = () => { clearTimeout(t); fail(new Error('IndexedDB đang bị khoá')); };
+    });
+  },
+  async run(mode, fn){
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(this.store, mode);
+      const rq = fn(tx.objectStore(this.store));
+      tx.onerror = () => rej(tx.error || new Error('giao dịch IndexedDB lỗi'));
+      tx.oncomplete = () => res(rq ? rq.result : undefined);
+    });
+  },
+  get(k){ return this.run('readonly',  st => st.get(k)); },
+  put(k, v){ return this.run('readwrite', st => st.put(v, k)); },
+  del(k){ return this.run('readwrite', st => st.delete(k)); },
+};
+
+/* Đường lùi khi IndexedDB không lưu được: ảnh sống đúng phiên này. */
+const sessionImages = new Map();
+const imgKey = mapId => GAME.id + ':' + mapId;
+
+/* Ảnh nào đang dùng cho từng bản đồ: 'custom' (người dùng chọn) |
+   'remote' (ảnh mặc định trên mạng) | không có (file trong maps/). */
+const imgPref     = ()      => load(K.imgPref, {}) || {};
+const setImgPref  = (id, v) => { const o = imgPref(); v ? (o[id] = v) : delete o[id]; save(K.imgPref, o); };
+
+/* Chỉ một objectURL sống mỗi lúc — quên thu hồi là rò bộ nhớ dần. */
+let curObjectURL = null;
+function showImage(url, isObject){
+  if (curObjectURL){ URL.revokeObjectURL(curObjectURL); curObjectURL = null; }
+  if (isObject) curObjectURL = url;
+  img.src = url || '';
+}
 
 /* ================= khung nhìn ================= */
 function applyView(){
@@ -787,6 +872,12 @@ const pointers = new Map();
 let pinchStart = null;
 
 viewport.addEventListener('pointerdown', ev => {
+  /* Màn chọn ảnh nằm TRONG #viewport. Nếu để viewport bắt con trỏ ở đây
+     thì setPointerCapture bên dưới nuốt luôn pointerup, và trình duyệt
+     KHÔNG sinh sự kiện click cho nút bên trong màn đó — nút trông bấm
+     được mà bấm không ăn gì. Vùng nền của màn có pointer-events:none nên
+     vẫn rơi xuống viewport như thường, chỉ hộp nút là được miễn trừ. */
+  if (ev.target.closest('#fallback')) return;
   viewport.setPointerCapture(ev.pointerId);
   pointers.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
 
@@ -963,28 +1054,133 @@ document.addEventListener('click', ev => {
 });
 
 /* ================= bản đồ ================= */
-function switchMap(id, silent){
+async function switchMap(id, silent){
   curMap = id;
-  const m = GAME.maps.find(x => x.id === id);
+  const m = GAME.maps.find(x => x.id === id) || null;
   $('#mapName').textContent = m ? m.name : id;
   routeA = routeB = null; routePath = []; linkFrom = null;
+  closeDetail();
+
   img.onload = () => {
     imgW = img.naturalWidth; imgH = img.naturalHeight;
-    img.style.display = 'block'; fallback.style.display = 'none';
+    img.style.display = 'block';
+    fallback.style.display = 'none';
     if (!silent) fit(); else { clampView(); applyView(); }
     refresh();
   };
   img.onerror = () => {
+    /* Ảnh hỏng / link chết / file không có: quay về màn chọn ảnh thay vì
+       để màn hình trống không nói gì. */
     imgW = 2000; imgH = 2000;
-    $('#fbTitle').textContent = 'Chưa có ảnh bản đồ';
-    $('#fbText').innerHTML = 'Đặt ảnh vào <code>' + esc(m ? m.src : '—') + '</code>';
-    img.style.display = 'none'; fallback.style.display = 'grid';
+    img.style.display = 'none';
+    openImagePanel(m, false);
     if (!silent) fit();
     refresh();
   };
-  img.src = m ? m.src : '';
-  closeDetail();
+
+  /* Thứ tự: ảnh người dùng tự chọn → ảnh mặc định trên mạng (nếu họ đã
+     bấm dùng) → file trong maps/. Ảnh người dùng chọn đứng trước vì đó
+     là việc họ chủ động làm gần nhất. */
+  const pref = m ? imgPref()[m.id] : null;
+  if (m && pref === 'custom'){
+    let blob = sessionImages.get(imgKey(m.id));
+    if (!blob) blob = await IDB.get(imgKey(m.id)).catch(() => null);
+    if (blob){ showImage(URL.createObjectURL(blob), true); return; }
+    setImgPref(m.id, null);          // ảnh biến mất thì đừng nhớ nữa
+  }
+  if (m && pref === 'remote' && m.remote){ showImage(m.remote.url); return; }
+  if (m && m.src){ showImage(m.src); return; }
+
+  imgW = 2000; imgH = 2000;
+  img.style.display = 'none';
+  openImagePanel(m, false);
+  if (!silent) fit();
+  refresh();
 }
+
+/* ================= chọn ảnh bản đồ ================= */
+/* closable = mở từ nút "🖼 Ảnh bản đồ" khi đang có ảnh sẵn, nên cho đóng
+   lại. Còn khi không có ảnh nào thì không có gì để quay về. */
+function openImagePanel(m, closable){
+  const map = m || GAME.maps.find(x => x.id === curMap) || null;
+  const R   = map && map.remote;
+  $('#fbTitle').textContent = closable ? 'Ảnh bản đồ' : 'Chưa có ảnh bản đồ';
+  $('#fbText').innerHTML = map && map.src
+    ? 'Đặt ảnh của bạn vào <code>' + esc(map.src) + '</code>, hoặc chọn bên dưới.'
+    : 'Chọn một ảnh để bắt đầu.';
+
+  $('#fbRemote').style.display = R ? '' : 'none';
+  $('#fbFile').style.display   = (closable && map && map.src) ? '' : 'none';
+  $('#fbClose').style.display  = closable ? '' : 'none';
+
+  /* Ghi rõ ảnh mặc định lấy từ đâu và của ai. Người dùng có quyền biết
+     mình sắp tải gì về từ máy chủ nào. */
+  $('#fbCredit').innerHTML = R
+    ? 'Bản đồ mặc định lấy từ <a href="' + esc(R.sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
+      esc(R.source) + '</a> — ảnh thuộc bản quyền ' + esc(R.rights) + '.<br>' +
+      'Bấm là tải thẳng từ máy chủ của họ, <b>không lưu lại được</b> nên mở ngoại tuyến sẽ không có bản đồ. ' +
+      'Muốn chạy ngoại tuyến thì tải ảnh về, đặt vào <code>' + esc(map.src || 'maps/') + '</code>.'
+    : '';
+  note('');
+  fallback.style.display = 'grid';
+}
+const note = (msg, on) => {
+  const el = $('#fbNote');
+  el.innerHTML = msg || '';
+  el.classList.toggle('on', !!msg);
+  if (on === 'warn') el.style.borderColor = '#f59e0b';
+  else el.style.borderColor = '';
+};
+
+/* Nhận ảnh người dùng chọn: dùng ngay, rồi mới cố lưu. Lưu được hay
+   không cũng không cản họ xem bản đồ trong phiên này. */
+async function useImageBlob(blob){
+  const map = GAME.maps.find(x => x.id === curMap);
+  if (!map) return;
+  const key = imgKey(map.id);
+  sessionImages.set(key, blob);
+  setImgPref(map.id, 'custom');
+  showImage(URL.createObjectURL(blob), true);
+
+  try {
+    await IDB.put(key, blob);
+  } catch(err){
+    /* Safari trên file:// rơi vào đây. Nói thẳng, đừng để người dùng
+       tưởng đã lưu rồi mai mở lên thấy trống. */
+    console.warn('[bản đồ] không lưu được ảnh vào IndexedDB:', err.message);
+    note('⚠️ Trình duyệt không cho lưu ảnh (hay gặp khi mở bằng <code>file://</code> trên Safari). ' +
+         'Ảnh dùng được cho lần mở này, nhưng <b>lần sau bạn phải chọn lại</b>.<br>' +
+         'Muốn khỏi chọn lại: đặt ảnh vào <code>' + esc(map.src || 'maps/') + '</code>.', 'warn');
+    fallback.style.display = 'grid';
+    setTimeout(() => { if (img.complete && img.naturalWidth) fallback.style.display = 'none'; }, 6000);
+  }
+}
+
+$('#imgBtn').addEventListener('click', () => openImagePanel(null, !!(img.complete && img.naturalWidth)));
+$('#fbClose').addEventListener('click', () => { fallback.style.display = 'none'; });
+$('#fbPick').addEventListener('click', () => $('#imgFile').click());
+$('#imgFile').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  if (!/^image\//.test(f.type)){ alert('Đây không phải file ảnh.'); return; }
+  await useImageBlob(f);
+});
+$('#fbRemote').addEventListener('click', () => {
+  const map = GAME.maps.find(x => x.id === curMap);
+  if (!map || !map.remote) return;
+  setImgPref(map.id, 'remote');
+  sessionImages.delete(imgKey(map.id));
+  showImage(map.remote.url);
+});
+$('#fbFile').addEventListener('click', () => {
+  const map = GAME.maps.find(x => x.id === curMap);
+  if (!map || !map.src) return;
+  setImgPref(map.id, null);
+  sessionImages.delete(imgKey(map.id));
+  IDB.del(imgKey(map.id)).catch(() => {});
+  showImage(map.src);
+});
 
 /* ================= nút bấm ================= */
 $('#mapSel').addEventListener('change', e => switchMap(e.target.value));
@@ -1265,6 +1461,7 @@ function applyGame(g){
     edges:  base + 'edges',
     found:  base + 'found',
     hidden: base + 'hidden',
+    imgPref:base + 'imgpref',
     theme:  K_THEME,
   };
   migrateLegacy(g, base);

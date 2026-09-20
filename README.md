@@ -49,6 +49,29 @@ Bấm **✎ Biên tập**:
 
 Xong thì **Xuất JSON** để sao lưu. **Nhập JSON** để nạp lại hoặc chia cho người khác.
 
+## Ảnh bản đồ
+
+Repo **không kèm ảnh bản đồ** — ảnh game là art có bản quyền. Ba cách để có ảnh:
+
+| Cách | App nhớ được? | Chạy ngoại tuyến? |
+|---|---|---|
+| Đặt file vào `maps/world.png` | — | ✅ |
+| **📁 Chọn ảnh từ máy** | ✅ IndexedDB | ✅ |
+| **🌐 Dùng bản đồ mặc định** | ❌ | ❌ |
+
+Nút **🖼 Ảnh bản đồ** ở cột trái mở màn chọn bất cứ lúc nào. Ảnh bạn tự chọn
+được ưu tiên hơn file trong `maps/`; bấm **📂 Ảnh trong maps/** để quay lại.
+
+Bản đồ mặc định của Final Fantasy IX lấy từ
+[fantasyanime.com](https://fantasyanime.com/finalfantasy/ff9/) — ảnh thuộc bản
+quyền © Square Enix. App **không tự tải**, chỉ tải khi bạn bấm nút, và tải thẳng
+từ máy chủ của họ. Máy chủ đó không trả header CORS nên trình duyệt **không cho
+lưu lại**: mỗi lần mở app là một lần tải, và ngoại tuyến thì không có bản đồ.
+Muốn chạy ngoại tuyến thì tải ảnh về, đặt vào `maps/world.png`.
+
+Một số trình duyệt (Safari khi mở bằng `file://`) chặn IndexedDB. Gặp trường hợp
+đó, app vẫn dùng được ảnh cho phiên đang mở và **nói rõ là lần sau phải chọn lại**.
+
 ## Dữ liệu lưu ở đâu
 
 Trong `localStorage` của trình duyệt, khoá theo id game:
@@ -58,10 +81,13 @@ ffmap.v2.ffix.data     marker
 ffmap.v2.ffix.edges    tuyến
 ffmap.v2.ffix.found    đã hoàn thành
 ffmap.v2.ffix.hidden   nhóm đang ẩn
+ffmap.v2.ffix.imgpref  đang dùng ảnh nào cho từng bản đồ
+ffmap.v2.game          game mở lần trước
 ffmap.v2.theme         nền sáng/tối (dùng chung mọi game)
 ```
 
-Nhiều game cùng tồn tại mà không đè dữ liệu của nhau.
+Nhiều game cùng tồn tại mà không đè dữ liệu của nhau. Dữ liệu nằm trên **máy và
+trình duyệt đó thôi** — không đồng bộ sang máy khác. Muốn mang đi thì Xuất JSON.
 
 Bản cũ dùng khoá `ff9map.v1.*`; lần đầu mở bản này, dữ liệu đó được chuyển
 sang khoá mới **một lần duy nhất** và **khoá cũ vẫn giữ nguyên** — chuyển sai
@@ -117,40 +143,28 @@ Cờ `features` bật/tắt từng phần của engine:
 
 ## Thêm / sửa nhóm
 
-Sửa `CONFIG.cats` — mỗi nhóm cần `id`, `name`, `color`. Đã có sẵn mấy nhóm
-riêng của FF9 còn trống, chờ anh đổ dữ liệu: **Chocograph**, **Stellazzio**,
-**Đồ dễ bỏ lỡ**, **Người chơi bài**, **Tiệm tổng hợp**.
+Sửa `cats` trong `data/ffix.js` — mỗi nhóm cần `id`, `name`, `color`, và `icon`
+là phần ruột của một thẻ SVG 24×24. Đã có sẵn mấy nhóm riêng của FF9 còn trống,
+chờ đổ dữ liệu: **Chocograph**, **Stellazzio**, **Đồ dễ bỏ lỡ**,
+**Người chơi bài**, **Tiệm tổng hợp**.
 
-## Dữ liệu lưu ở đâu
+Engine không hardcode id nhóm nào — kể cả `port` hay `chocobo`. Luật "nối mọi
+bến tàu với nhau" nằm ở `rules` trong file dữ liệu, không nằm trong engine.
 
-`localStorage` của trình duyệt, khoá bắt đầu bằng `ff9map.v1`:
-
-| Khoá | Nội dung |
-|---|---|
-| `.data` | Toàn bộ marker |
-| `.found` | Những điểm đã tick hoàn thành |
-| `.hidden` | Nhóm đang ẩn |
-| `.theme` | Nền sáng / tối |
-
-Dữ liệu nằm trên **máy và trình duyệt đó thôi** — không đồng bộ sang máy khác.
-Muốn mang đi thì Xuất JSON.
-
-Đổi `CONFIG.store` sang tên khác nếu anh muốn chạy nhiều dự án bản đồ song song
-mà không đụng dữ liệu của nhau.
-
-## 41 điểm đặt sẵn
+## 44 điểm đặt sẵn
 
 Các địa danh trên bản đồ thế giới đã được đặt sẵn theo nhóm: thị trấn, hầm ngục,
-đền thờ, cổng, Chocobo, đầm lầy Qu. Vị trí là **ước lượng từ ảnh** — vào chế độ
-biên tập kéo chỉnh cho khớp là xong.
+đền thờ, cổng, Chocobo, đầm lầy Qu, bến tàu, đặc biệt. Vị trí là **ước lượng từ
+ảnh** — vào chế độ biên tập kéo chỉnh cho khớp là xong.
 
-Muốn bỏ hết làm lại từ đầu: xoá khoá `ff9map.v1.data` trong localStorage
+Muốn bỏ hết làm lại từ đầu: xoá khoá `ffmap.v2.ffix.data` trong localStorage
 (DevTools → Application → Local Storage), tải lại trang.
 
-## Về ảnh bản đồ
+## Đưa lên web thì nhớ
 
-Engine này không kèm ảnh nào. Ảnh anh tự đặt vào `maps/`.
+Repo này chỉ có **engine** — phần mã tự viết. Ảnh bản đồ không nằm trong repo,
+và `.gitignore` chặn sẵn `maps/*` để không vô tình commit nhầm.
 
-Nếu định **đưa lên web cho người khác xem**, nhớ là lúc đó anh đang phát tán
-ảnh đó — nên chỉ dùng ảnh anh có quyền phân phối. Chạy local cho riêng mình
-thì không vướng gì.
+Nếu định đưa lên web cho người khác xem thì lúc đó bạn đang **phát tán** thứ
+mình đặt trong `maps/` — chỉ dùng ảnh bạn có quyền phân phối. Chạy local cho
+riêng mình thì không vướng gì.
