@@ -9,6 +9,7 @@ mở bằng `file://` là chạy.
 ff9-map/
 ├── index.html         ← engine: pan/zoom, marker, tìm đường… không chứa dữ liệu game
 ├── data/
+│   ├── games.js       ← danh sách game có sẵn dữ liệu
 │   └── ffix.js        ← dữ liệu Final Fantasy IX: nhóm, phương tiện, 44 điểm
 ├── tools/
 │   └── check.mjs      ← nghiệm thu bằng trình duyệt thật (tuỳ chọn, cần playwright)
@@ -88,9 +89,22 @@ Bộ chọn bản đồ ở cột trái tự cập nhật. Mỗi marker nhớ n�
 
 ## Thêm game
 
-Viết một file `data/<game>.js` theo mẫu `data/ffix.js`, rồi thêm nó vào
-`CONFIG.dataFiles` trong `index.html`. Mỗi bộ dữ liệu tự khai nhóm điểm,
-phương tiện và luật nối tuyến của riêng nó — engine không hardcode cái nào.
+Viết một file `data/<game>.js` theo mẫu `data/ffix.js`, rồi thêm một dòng
+vào `data/games.js`:
+
+```js
+window.MAPGAMELIST = [
+  { id:'ffix', name:'Final Fantasy IX', file:'data/ffix.js' },
+  { id:'game2', name:'Tên game', file:'data/game2.js' },
+];
+```
+
+Bộ chọn game ở cột trái tự cập nhật. Engine chỉ nạp file của game đang xem,
+mỗi game có khoá lưu riêng nên dữ liệu không đè nhau, và app nhớ game mở
+lần trước.
+
+Mỗi bộ dữ liệu tự khai nhóm điểm, phương tiện và luật nối tuyến của riêng
+nó — engine không hardcode cái nào.
 
 Cờ `features` bật/tắt từng phần của engine:
 

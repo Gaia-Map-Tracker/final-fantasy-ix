@@ -205,6 +205,11 @@ textarea{resize:vertical; min-height:62px}
       <button class="btn" id="themeBtn" style="flex:0 0 auto" title="Đổi nền sáng/tối">◐</button>
     </div>
 
+    <div class="sec" id="gameSec">
+      <label class="fld" for="gameSel">Game</label>
+      <select id="gameSel"></select>
+    </div>
+
     <div class="sec">
       <label class="fld" for="mapSel">Bản đồ</label>
       <select id="mapSel"></select>
@@ -316,8 +321,9 @@ textarea{resize:vertical; min-height:62px}
    file:// là cả hai đều bị chặn.
    ================================================================== */
 const CONFIG = {
-  /* Bộ dữ liệu nạp lúc khởi động. Slice sau thay bằng data/games.js. */
-  dataFiles: ['data/ffix.js'],
+  /* Danh sách game. File này khai có những game nào và dữ liệu của mỗi
+     game nằm ở file nào — engine chỉ nạp file của game đang xem. */
+  gameList: 'data/games.js',
 
   zoom: {
     min: 0.05, max: 8,
@@ -385,6 +391,7 @@ const NS = 'ffmap.v2.';
    đổi game mà nền nhảy từ tối sang sáng thì vô lý. */
 let K = {};
 const K_THEME = NS + 'theme';
+const K_GAME  = NS + 'game';    // id game mở lần trước
 function load(key, fb){
   try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; }
   catch{ return fb; }
@@ -1013,15 +1020,16 @@ $('#showEdges').addEventListener('click', () => {
   renderEdges();
 });
 
-$('#editBtn').addEventListener('click', () => {
-  editing = !editing;
+function setEdit(on){
+  editing = on;
   if (!editing){ linking = false; linkFrom = null; }
   $('#editBtn').classList.toggle('on', editing);
   $('#editbar').classList.toggle('on', editing);
   $('#linkBtn').classList.toggle('on', linking);
   viewport.classList.toggle('edit', editing && !linking);
   closeDetail(); refresh();
-});
+}
+$('#editBtn').addEventListener('click', () => setEdit(!editing));
 /* Nối tự động: tạo tuyến ĐI BỘ giữa mọi cặp điểm gần nhau hơn bán kính
    cho trước. Máy không biết đâu là biển, nên nó sẽ nối lố vài chỗ —
    nhanh hơn nhiều so với vẽ tay, rồi xoá vài đường sai là xong. */
@@ -1263,6 +1271,8 @@ function applyGame(g){
   curMap = g.maps[0].id;
   warnedScale = false;
 
+  document.title = 'Bản đồ tương tác — ' + g.name;
+  $('#gameSel').value = g.id;
   $('#mapSel').innerHTML   = g.maps.map(m =>
     '<option value="' + m.id + '">' + esc(m.name) + '</option>').join('');
   $('#linkType').innerHTML = g.links.map(t =>
@@ -1280,21 +1290,65 @@ function applyGame(g){
   show('#resetBtn', feat('progress'));
 }
 
-/* ================= khởi động ================= */
-(async () => {
-  try {
-    for (const f of CONFIG.dataFiles) await loadScript(f);
-  } catch(err){ fatal(err.message); return; }
+/* ================= chọn game ================= */
+let GAMELIST = [];
+const loadedGames = new Map();          // id -> bộ dữ liệu đã nạp
 
-  const games = window.MAPGAMES || [];
-  if (!games.length){
-    fatal('data/ffix.js nạp được nhưng không đăng ký game nào vào window.MAPGAMES.');
-    return;
+/* Nạp file dữ liệu của một game rồi gắn vào engine. Chỉ nạp file của
+   game đang xem — nạp sẵn cả mười game là tốn công khi mỗi lúc người
+   dùng chỉ nhìn một cái. Đã nạp rồi thì dùng lại, không nạp hai lần. */
+async function selectGame(id){
+  const entry = GAMELIST.find(x => x.id === id);
+  if (!entry){ fatal('Không có game id "' + id + '" trong ' + CONFIG.gameList); return; }
+
+  let g = loadedGames.get(id);
+  if (!g){
+    try { await loadScript(entry.file); }
+    catch(err){ fatal(err.message); return; }
+    g = (window.MAPGAMES || []).find(x => x.id === id);
+    if (!g){
+      fatal(entry.file + ' nạp được nhưng không đăng ký game id "' + id + '".');
+      return;
+    }
+    loadedGames.set(id, g);
   }
-  applyGame(games[0]);
-  boot();
+
+  /* Trạng thái của game cũ phải dọn sạch: id marker của game này trùng
+     id của game kia, để sót là tuyến trỏ lung tung. */
+  routeA = routeB = null; routePath = []; pickMode = null; linkFrom = null;
+
+  applyGame(g);
+  boot();                 // đọc lại localStorage theo khoá của game mới
+  /* setEdit() phải chạy SAU applyGame: nó gọi refresh(), mà refresh đọc
+     GAME.cats — gọi sớm là vỡ ngay lần mở đầu tiên khi GAME còn null. */
+  setEdit(false);
   syncPickBtns();
   switchMap(curMap);
+  save(K_GAME, id);
+}
+
+$('#gameSel').addEventListener('change', e => selectGame(e.target.value));
+
+/* ================= khởi động ================= */
+(async () => {
+  try { await loadScript(CONFIG.gameList); }
+  catch(err){ fatal(err.message); return; }
+
+  GAMELIST = window.MAPGAMELIST || [];
+  if (!GAMELIST.length){
+    fatal(CONFIG.gameList + ' nạp được nhưng không khai game nào trong window.MAPGAMELIST.');
+    return;
+  }
+
+  $('#gameSel').innerHTML = GAMELIST.map(x =>
+    '<option value="' + x.id + '">' + esc(x.name) + '</option>').join('');
+  /* Một game thì bộ chọn chẳng để làm gì, nhưng vẫn hiện — nó là chỗ
+     người dùng nhìn vào để biết app xem được nhiều game. */
+  $('#gameSec').title = GAMELIST.map(x => x.name + (x.note ? ' — ' + x.note : '')).join('\n');
+
+  const want = load(K_GAME, null);
+  const pick = GAMELIST.some(x => x.id === want) ? want : GAMELIST[0].id;
+  await selectGame(pick);
 })();
 })();
 </script>
