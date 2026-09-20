@@ -94,11 +94,21 @@ từ máy chủ của họ. Máy chủ đó không trả header CORS nên trình
 lưu lại**: mỗi lần mở app là một lần tải, và ngoại tuyến thì không có bản đồ.
 Muốn chạy ngoại tuyến thì tải ảnh về, đặt vào `maps/world.png`.
 
-**Safari mở bằng `file://` thì không lưu được ảnh** — đã đo trên WebKit 26.6:
-mọi thứ khác chạy bình thường, riêng IndexedDB hỏng ở tầng giao dịch. Gặp trường
-hợp đó app vẫn dùng được ảnh cho phiên đang mở và **nói rõ là lần sau phải chọn
-lại**. Muốn ảnh sống qua các lần mở trên Safari: đặt file vào `maps/world.png`,
-hoặc chạy qua một web server thay vì mở thẳng file.
+### Đã chạy thật trên ba trình duyệt
+
+Mở bằng `file://`, đo ngày 2026-09-20 (`node tools/check.mjs --engine <tên>`):
+
+| | Chrome/Edge | Safari | Firefox |
+|---|---|---|---|
+| App chạy, 9/9 chỉ số | ✅ | ✅ | ✅ |
+| Thêm / kéo / sửa điểm, hoàn tác | ✅ | ✅ | ✅ |
+| Nối tuyến, tìm đường | ✅ | ✅ | ✅ |
+| **Nhớ ảnh đã chọn** | ✅ | ❌ | ✅ |
+
+**Safari mở bằng `file://` không lưu được ảnh.** Mọi thứ khác chạy bình thường,
+riêng IndexedDB hỏng ở tầng giao dịch. App vẫn dùng được ảnh cho phiên đang mở và
+**nói rõ là lần sau phải chọn lại**. Muốn ảnh sống qua các lần mở trên Safari:
+đặt file vào `maps/world.png`, hoặc chạy qua một web server thay vì mở thẳng file.
 
 ## Dữ liệu lưu ở đâu
 

@@ -5,9 +5,10 @@
  *
  * Chạy:  node tools/check.mjs [--shot out.png] [--engine webkit]
  *
- * --engine webkit chạy trên engine của Safari. Đáng chạy trước khi giao:
- * [ĐO 2026-09-20] Safari qua file:// KHÔNG lưu được ảnh vào IndexedDB
- * (hỏng ở tầng giao dịch, tx.error = null) — mọi thứ khác thì bình thường.
+ * --engine chromium | webkit (Safari) | firefox. Đáng chạy cả ba trước khi giao.
+ * [ĐO 2026-09-20] cả ba đều khớp baseline 9/9 và thao tác biên tập giống nhau.
+ * Khác nhau đúng một chỗ: Safari qua file:// KHÔNG lưu được ảnh vào IndexedDB
+ * (hỏng ở tầng giao dịch, tx.error = null); Chrome và Firefox thì lưu được.
  *
  * Cần:   npm i -g playwright  (và `playwright install chromium webkit`)
  */
