@@ -47,6 +47,19 @@ Bấm **✎ Biên tập**:
 - Kéo điểm → đổi vị trí
 - Bấm điểm → sửa tên, nhóm, ghi chú, hoặc xoá
 
+### Về dữ liệu gốc
+
+Nút **↺ Về dữ liệu gốc** bỏ mọi chỉnh sửa và nạp lại đúng bộ dữ liệu trong
+`data/<game>.js`: điểm tự thêm, điểm đã sửa, tuyến đã vẽ — mất hết. Các ô đã
+tick hoàn thành thì **giữ nguyên**.
+
+Khác với nút **Xoá tiến độ** ở cột trái: nút kia chỉ bỏ mấy ô tick, marker và
+tuyến vẫn nguyên.
+
+App hỏi hai lần và lần đầu nói rõ sẽ mất bao nhiêu điểm, bao nhiêu tuyến. Vẫn
+hoàn tác được bằng ↶ ngay sau đó — nhưng tải lại trang là mất đường lùi, nên
+**Xuất JSON** trước cho chắc.
+
 ### Hoàn tác
 
 Nút **↶ Hoàn tác** trên thanh biên tập, hoặc `Ctrl/Cmd + Z`. Giữ **30 bước** gần

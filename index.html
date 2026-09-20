@@ -300,6 +300,8 @@ textarea{resize:vertical; min-height:62px}
       <span id="ebText">✎ Bấm bản đồ để thêm điểm · kéo điểm để di chuyển</span>
       <span class="grp">
         <button class="btn" id="undoBtn" title="Hoàn tác (Ctrl/Cmd + Z)">↶ Hoàn tác</button>
+        <button class="btn danger" id="revertBtn"
+                title="Bỏ mọi chỉnh sửa, quay về dữ liệu gốc của game">↺ Về dữ liệu gốc</button>
       </span>
       <span class="grp" id="linkGrp">
         <button class="btn" id="linkBtn">🔗 Nối điểm</button>
@@ -605,6 +607,54 @@ function syncUndo(){
 }
 
 $('#undoBtn').addEventListener('click', undo);
+
+/* Bỏ hết chỉnh sửa, quay về đúng bộ dữ liệu trong data/<game>.js.
+   Khác hẳn nút "Xoá tiến độ" ở cột trái: nút kia chỉ bỏ mấy ô tick, nút
+   này thay toàn bộ marker và tuyến.
+
+   Hỏi hai lần, và lần đầu nói rõ SẼ MẤT GÌ bằng số đếm thật — "bạn có
+   chắc không?" mà không kèm con số thì người ta bấm Đồng ý theo phản xạ.
+   Vẫn hoàn tác được ngay sau đó, nhưng chỉ trong phiên này. */
+function revertToSeed(){
+  const seed  = seedMarkers();
+  const byId  = new Map(seed.map(p => [p.id, p]));
+  const added = markers.filter(p => !byId.has(p.id)).length;
+  const edited = markers.filter(p => {
+    const o = byId.get(p.id);
+    return o && (o.name !== p.name || o.cat !== p.cat || o.note !== (p.note || '') ||
+                 Math.abs(o.x - p.x) > 1e-9 || Math.abs(o.y - p.y) > 1e-9);
+  }).length;
+
+  if (!added && !edited && !edges.length && markers.length === seed.length){
+    alert('Dữ liệu đang đúng như bản gốc rồi, không có gì để bỏ.');
+    return;
+  }
+  if (!confirm(
+    'Quay về dữ liệu gốc của "' + GAME.name + '"?\n\n' +
+    'Sẽ mất:\n' +
+    '· ' + added + ' điểm tự thêm\n' +
+    '· ' + edited + ' điểm đã sửa (tên, nhóm, ghi chú hoặc vị trí)\n' +
+    '· ' + edges.length + ' tuyến đã vẽ\n\n' +
+    'Áp cho TOÀN BỘ bản đồ của game này, không riêng bản đồ đang mở.\n' +
+    'Nên bấm "Xuất JSON" trước để giữ một bản sao.')) return;
+  if (!confirm('Chắc chắn bỏ hết?\n\nHoàn tác được bằng ↶ ngay sau đó, ' +
+               'nhưng tải lại trang là mất đường lùi.')) return;
+
+  pushUndo('về dữ liệu gốc');
+  markers = seed;
+  edges   = [];
+  /* Giữ các ô đã tick, nhưng bỏ tick của những điểm không còn tồn tại —
+     để lại là con số tiến độ đếm cả thứ đã biến mất. */
+  const alive = new Set(seed.map(p => p.id));
+  found = new Set([...found].filter(id => alive.has(id)));
+  nextId   = Math.max(nextId,   seed.reduce((m,p) => Math.max(m, p.id), 0) + 1);
+  routeA = routeB = linkFrom = null; routePath = [];
+
+  persist(); persistE(); save(K.found, [...found]);
+  closeDetail(); refresh();
+  alert('Đã quay về dữ liệu gốc: ' + seed.length + ' điểm, 0 tuyến.');
+}
+$('#revertBtn').addEventListener('click', revertToSeed);
 
 /* ================= khung nhìn ================= */
 function applyView(){
