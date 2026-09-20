@@ -48,6 +48,24 @@ Bấm **✎ Biên tập**:
 
 Xong thì **Xuất JSON** để sao lưu. **Nhập JSON** để nạp lại hoặc chia cho người khác.
 
+## Dữ liệu lưu ở đâu
+
+Trong `localStorage` của trình duyệt, khoá theo id game:
+
+```
+ffmap.v2.ffix.data     marker
+ffmap.v2.ffix.edges    tuyến
+ffmap.v2.ffix.found    đã hoàn thành
+ffmap.v2.ffix.hidden   nhóm đang ẩn
+ffmap.v2.theme         nền sáng/tối (dùng chung mọi game)
+```
+
+Nhiều game cùng tồn tại mà không đè dữ liệu của nhau.
+
+Bản cũ dùng khoá `ff9map.v1.*`; lần đầu mở bản này, dữ liệu đó được chuyển
+sang khoá mới **một lần duy nhất** và **khoá cũ vẫn giữ nguyên** — chuyển sai
+thì vẫn còn bản gốc mà lấy lại.
+
 ## Toạ độ lưu theo tỉ lệ 0–1
 
 Không lưu theo pixel. Nghĩa là **đổi ảnh bản đồ sang độ phân giải khác,

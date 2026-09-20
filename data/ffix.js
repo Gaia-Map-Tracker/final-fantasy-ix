@@ -17,9 +17,10 @@ window.MAPGAMES.push({
   id:   'ffix',
   name: 'Final Fantasy IX',
 
-  /* Tiền tố khoá localStorage. Giữ nguyên 'ff9map.v1' để bản cũ mở lên
-     không mất dữ liệu — slice sau sẽ đổi sang khoá theo game kèm migrate. */
-  store: 'ff9map.v1',
+  /* Khoá localStorage của bản CŨ, hồi app còn là bản đồ một game.
+     Engine giờ tự đặt khoá theo id game; khoá này chỉ còn dùng để chuyển
+     dữ liệu cũ sang lần đầu mở bản mới. Dữ liệu cũ KHÔNG bị xoá. */
+  legacyStore: 'ff9map.v1',
 
   /* Tính năng engine bật cho game này. Game open world sau này đặt
      routing:false — đi đâu cũng được, tìm đường ngắn nhất vô nghĩa —

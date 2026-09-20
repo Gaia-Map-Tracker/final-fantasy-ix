@@ -346,7 +346,7 @@ let GAME = null;
 const $ = s => document.querySelector(s);
 let catById  = new Map();
 let linkById = new Map();
-const NS = 'http://www.w3.org/2000/svg';
+const SVGNS = 'http://www.w3.org/2000/svg';
 /* Ký hiệu nhóm. Vẽ bằng SVG nội tuyến nên không lệ thuộc font hay emoji
    của hệ điều hành — máy nào cũng hiện giống nhau. */
 const glyph = cat => {
@@ -376,7 +376,15 @@ const viewport = $('#viewport'), world = $('#world');
 const img = $('#mapimg'), pinsEl = $('#pins'), fallback = $('#fallback'), svg = $('#links');
 
 /* ================= lưu trữ ================= */
-let K = {};   // khoá localStorage — tính theo game trong applyGame()
+/* Tiền tố chung của mọi khoá localStorage. Đổi tiền tố này là coi như
+   dữ liệu cũ không còn đọc được — nên chỉ đổi khi đổi cấu trúc lưu. */
+const NS = 'ffmap.v2.';
+
+/* Khoá theo GAME — nhiều game cùng tồn tại mà không đè nhau. Riêng theme
+   là thiết lập của người dùng, không thuộc game nào, nên để toàn cục:
+   đổi game mà nền nhảy từ tối sang sáng thì vô lý. */
+let K = {};
+const K_THEME = NS + 'theme';
 function load(key, fb){
   try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; }
   catch{ return fb; }
@@ -399,7 +407,7 @@ function boot(){
   nextEdge  = edges.reduce((m,e) => Math.max(m, e.id), 0) + 1;
   found  = new Set(load(K.found, []));
   hidden = new Set(load(K.hidden, []));
-  const th = load(K.theme, null);
+  const th = load(K_THEME, null);
   if (th) document.documentElement.dataset.theme = th;
 }
 const persist  = () => save(K.data, markers);
@@ -605,7 +613,7 @@ function renderEdges(){
     const A = byId.get(e.a), B = byId.get(e.b);
     if (!A || !B) continue;
     const t = linkById.get(e.type) || { color:'#94a3b8' };
-    const ln = document.createElementNS(NS, 'line');
+    const ln = document.createElementNS(SVGNS, 'line');
     ln.setAttribute('x1', A.x*imgW); ln.setAttribute('y1', A.y*imgH);
     ln.setAttribute('x2', B.x*imgW); ln.setAttribute('y2', B.y*imgH);
     ln.setAttribute('stroke', t.color);
@@ -617,7 +625,7 @@ function renderEdges(){
     const A = byId.get(s.from), B = byId.get(s.to);
     if (!A || !B) continue;
     const t = linkById.get(s.edge.type) || { color:'#fff' };
-    const ln = document.createElementNS(NS, 'line');
+    const ln = document.createElementNS(SVGNS, 'line');
     ln.setAttribute('x1', A.x*imgW); ln.setAttribute('y1', A.y*imgH);
     ln.setAttribute('x2', B.x*imgW); ln.setAttribute('y2', B.y*imgH);
     ln.setAttribute('stroke', t.color);
@@ -1158,7 +1166,7 @@ $('#resetBtn').addEventListener('click', () => {
 $('#themeBtn').addEventListener('click', () => {
   const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
   document.documentElement.dataset.theme = next;
-  save(K.theme, next);
+  save(K_THEME, next);
 });
 
 document.addEventListener('keydown', ev => {
@@ -1205,19 +1213,53 @@ function fatal(msg){
   img.style.display = 'none';
 }
 
+/* Chuyển dữ liệu của bản cũ (một game, khoá 'ff9map.v1.*') sang khoá mới
+   theo game. Chạy đúng MỘT lần cho mỗi game, đánh dấu bằng cờ .migrated —
+   không có cờ này thì người dùng xoá hết marker xong mở lại sẽ bị kéo
+   nguyên dữ liệu cũ về, tưởng app tự hồi sinh thứ mình vừa xoá.
+
+   KHÔNG xoá khoá cũ: nếu chuyển sai thì dữ liệu gốc vẫn còn đó mà lấy lại. */
+function migrateLegacy(g, base){
+  const legacy = g.legacyStore;
+  if (!legacy) return;
+  const flag = base + 'migrated';
+  try {
+    if (localStorage.getItem(flag)) return;
+    const moved = [];
+    for (const name of ['data', 'edges', 'found', 'hidden']){
+      const old = localStorage.getItem(legacy + '.' + name);
+      if (old !== null && localStorage.getItem(base + name) === null){
+        localStorage.setItem(base + name, old);
+        moved.push(name);
+      }
+    }
+    const oldTheme = localStorage.getItem(legacy + '.theme');
+    if (oldTheme !== null && localStorage.getItem(K_THEME) === null){
+      localStorage.setItem(K_THEME, oldTheme);
+      moved.push('theme');
+    }
+    localStorage.setItem(flag, new Date().toISOString());
+    if (moved.length)
+      console.info('[bản đồ] đã chuyển dữ liệu cũ "' + legacy + '.*" sang "' + base +
+                   '*": ' + moved.join(', ') + '. Khoá cũ vẫn giữ nguyên.');
+  } catch { /* chế độ riêng tư: không lưu được thì cũng không migrate được */ }
+}
+
 /* Gắn một bộ dữ liệu game vào engine. Mọi thứ phụ thuộc game đều được
    tính lại ở đây — engine không giữ hằng số nào của riêng game nào. */
 function applyGame(g){
   GAME     = g;
   catById  = new Map(g.cats.map(c => [c.id, c]));
   linkById = new Map(g.links.map(c => [c.id, c]));
+  const base = NS + g.id + '.';
   K = {
-    data:   g.store + '.data',
-    edges:  g.store + '.edges',
-    found:  g.store + '.found',
-    hidden: g.store + '.hidden',
-    theme:  g.store + '.theme',
+    data:   base + 'data',
+    edges:  base + 'edges',
+    found:  base + 'found',
+    hidden: base + 'hidden',
+    theme:  K_THEME,
   };
+  migrateLegacy(g, base);
   curMap = g.maps[0].id;
   warnedScale = false;
 
