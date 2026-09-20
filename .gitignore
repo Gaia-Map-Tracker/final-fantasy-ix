@@ -1,0 +1,16 @@
+# Ảnh bản đồ — art của game, thuộc bản quyền Square Enix.
+# Đưa lên repo là phát tán lại, nên để ngoài. Người dùng tự đặt ảnh
+# của họ vào (xem maps/README.md).
+maps/*
+!maps/README.md
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Trình soạn thảo
+.vscode/
+.idea/
+*.swp
