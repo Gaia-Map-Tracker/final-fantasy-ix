@@ -7,10 +7,18 @@ mở bằng `file://` là chạy.
 
 ```
 ff9-map/
-├── index.html      ← toàn bộ ứng dụng nằm trong đây
+├── index.html         ← engine: pan/zoom, marker, tìm đường… không chứa dữ liệu game
+├── data/
+│   └── ffix.js        ← dữ liệu Final Fantasy IX: nhóm, phương tiện, 44 điểm
+├── tools/
+│   └── check.mjs      ← nghiệm thu bằng trình duyệt thật (tuỳ chọn, cần playwright)
 └── maps/
-    └── world.png   ← đặt ảnh bản đồ của anh vào đây
+    └── world.png      ← đặt ảnh bản đồ của anh vào đây
 ```
+
+Engine và dữ liệu game tách rời: `index.html` không biết gì về Final Fantasy IX.
+File trong `data/` tự đăng ký vào `window.MAPGAMES`, nạp bằng thẻ `<script>` chèn
+động — không `fetch()`, không `import`, vì cả hai đều bị chặn khi mở bằng `file://`.
 
 Mở `index.html` bằng trình duyệt. Chưa có ảnh vẫn chạy được — nó hiện nền tạm
 và anh vẫn đặt / sửa marker bình thường.
@@ -47,16 +55,33 @@ marker vẫn nằm đúng chỗ** — miễn là khung hình giữ nguyên tỉ 
 
 ## Thêm bản đồ
 
-Sửa `CONFIG.maps` ở đầu khối `<script>`:
+Sửa `maps` trong `data/ffix.js`:
 
 ```js
 maps: [
-  { id:'world',      name:'Bản đồ thế giới', src:'maps/world.png' },
-  { id:'alexandria', name:'Alexandria',      src:'maps/alexandria.png' },
+  { id:'world',      name:'Bản đồ thế giới', src:'maps/world.png',      aspect:1.0 },
+  { id:'alexandria', name:'Alexandria',      src:'maps/alexandria.png', aspect:1.0 },
 ],
 ```
 
+`aspect` là tỉ lệ khung hình (rộng / cao) của ảnh mà toạ độ được đặt theo.
+
 Bộ chọn bản đồ ở cột trái tự cập nhật. Mỗi marker nhớ nó thuộc bản đồ nào.
+
+## Thêm game
+
+Viết một file `data/<game>.js` theo mẫu `data/ffix.js`, rồi thêm nó vào
+`CONFIG.dataFiles` trong `index.html`. Mỗi bộ dữ liệu tự khai nhóm điểm,
+phương tiện và luật nối tuyến của riêng nó — engine không hardcode cái nào.
+
+Cờ `features` bật/tắt từng phần của engine:
+
+| Cờ | Tắt thì |
+|---|---|
+| `routing: false` | Ẩn hẳn khung Chỉ đường, nút Nối điểm / Nối bến tàu / Nối gần — dành cho game open world, đi đâu cũng được nên tìm đường ngắn nhất vô nghĩa |
+| `progress: false` | Ẩn thanh tiến độ và ô tick "đã hoàn thành" |
+
+**Không kèm ảnh bản đồ của game vào repo** — đó là art có bản quyền.
 
 ## Thêm / sửa nhóm
 

@@ -216,7 +216,7 @@ textarea{resize:vertical; min-height:62px}
       <div id="results"></div>
     </div>
 
-    <div class="sec">
+    <div class="sec" id="routeSec">
       <label class="fld">Chỉ đường</label>
       <div class="row" style="margin-bottom:6px">
         <button class="btn" id="pickA">① Điểm đi</button>
@@ -230,7 +230,7 @@ textarea{resize:vertical; min-height:62px}
       </div>
     </div>
 
-    <div class="sec" style="padding-bottom:6px">
+    <div class="sec" id="progSec" style="padding-bottom:6px">
       <div class="pstat"><span>Tiến độ</span><span id="pTxt">0 / 0</span></div>
       <div class="bar"><i id="pBar"></i></div>
     </div>
@@ -259,14 +259,14 @@ textarea{resize:vertical; min-height:62px}
     <button id="toggleSide" title="Ẩn/hiện bảng bên">☰</button>
     <div id="editbar">
       <span id="ebText">✎ Bấm bản đồ để thêm điểm · kéo điểm để di chuyển</span>
-      <span class="grp">
+      <span class="grp" id="linkGrp">
         <button class="btn" id="linkBtn">🔗 Nối điểm</button>
         <select id="linkType" title="Phương tiện cho tuyến sắp vẽ"></select>
       </span>
-      <span class="grp">
+      <span class="grp" id="hubGrp">
         <button class="btn" id="portBtn">⚓ Nối bến tàu</button>
       </span>
-      <span class="grp">
+      <span class="grp" id="autoGrp">
         <button class="btn" id="autoBtn">⚡ Nối gần</button>
         <input type="number" id="autoR" value="12" min="2" max="60" step="1"
                title="Bán kính nối, tính theo % chiều rộng bản đồ">
@@ -282,9 +282,8 @@ textarea{resize:vertical; min-height:62px}
       </div>
       <div id="fallback">
         <div>
-          <h2 style="margin:0 0 8px">Chưa có ảnh bản đồ</h2>
-          <p style="margin:0; opacity:.8">Đặt ảnh vào <code>maps/world.png</code><br>
-          hoặc sửa <code>CONFIG.maps[].src</code> trong file này.</p>
+          <h2 style="margin:0 0 8px" id="fbTitle">Chưa có ảnh bản đồ</h2>
+          <p style="margin:0; opacity:.8" id="fbText">Đặt ảnh vào <code>maps/world.png</code></p>
           <p style="margin:12px 0 0; opacity:.6; font-size:13px">Vẫn đặt và sửa marker bình thường được.</p>
         </div>
       </div>
@@ -308,124 +307,45 @@ textarea{resize:vertical; min-height:62px}
 'use strict';
 
 /* ==================================================================
-   CONFIG — sửa ở đây là chính, phần dưới không cần đụng tới.
-   Toạ độ marker lưu theo tỉ lệ 0–1 nên đổi ảnh / đổi độ phân giải
-   vẫn không lệch điểm.
+   CONFIG — chỉ còn thiết lập của ENGINE.
+
+   Dữ liệu từng game (nhóm điểm, phương tiện, điểm đặt sẵn, luật nối
+   tuyến) KHÔNG còn ở đây nữa — nó nằm trong data/<game>.js và tự đăng
+   ký vào window.MAPGAMES. Engine nạp các file đó bằng thẻ <script>
+   chèn động, KHÔNG dùng fetch() và KHÔNG dùng import: mở trang bằng
+   file:// là cả hai đều bị chặn.
    ================================================================== */
 const CONFIG = {
-  store: 'ff9map.v1',
-  maps: [
-    { id:'world', name:'Bản đồ thế giới', src:'maps/world.png' },
-    // Thêm bản đồ khác ở đây, ví dụ:
-    // { id:'alexandria', name:'Alexandria', src:'maps/alexandria.png' },
-  ],
-  cats: [
-    { id:'town',       name:'Thị trấn & thành phố', color:'#fbbf24',
-      icon:'<path d="M4 11l8-6 8 6"/><path d="M6 10.5V20h12v-9.5"/><path d="M10 20v-5h4v5"/>' },
-    { id:'dungeon',    name:'Hầm ngục',             color:'#a78bfa',
-      icon:'<path d="M4 20v-7a8 8 0 0 1 16 0v7"/><path d="M9 20v-5a3 3 0 0 1 6 0v5"/>' },
-    { id:'shrine',     name:'Đền thờ',              color:'#22d3ee',
-      icon:'<path d="M3 6h18"/><path d="M5 9.5h14"/><path d="M7 6v14"/><path d="M17 6v14"/>' },
-    { id:'gate',       name:'Cổng',                 color:'#94a3b8',
-      icon:'<path d="M5 20V9l7-4 7 4v11"/><path d="M9.5 20v-6a2.5 2.5 0 0 1 5 0v6"/>' },
-    { id:'chocobo',    name:'Chocobo',              color:'#fde047',
-      icon:'<path d="M18 5c1 6-3 11-8 12"/><path d="M18 5c-6 0-10 3-11 8"/><path d="M7 13l-2 6"/>' },
-    { id:'qu',         name:"Đầm lầy Qu",           color:'#4ade80',
-      icon:'<path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/>' },
-    { id:'port',       name:'Bến tàu / bãi đáp',    color:'#fb7185',
-      icon:'<circle cx="12" cy="4.5" r="2"/><path d="M12 6.5V20"/><path d="M8 10h8"/><path d="M4.5 13.5a7.5 7.5 0 0 0 15 0"/>' },
-    { id:'special',    name:'Đặc biệt',             color:'#f472b6',
-      icon:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/>' },
-    { id:'chocograph', name:'Chocograph',           color:'#fb923c',
-      icon:'<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14"/><path d="M15 6v14"/>' },
-    { id:'stellazzio', name:'Stellazzio',           color:'#e879f9',
-      icon:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5l1.4 2.9 3.1.4-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.4z"/>' },
-    { id:'missable',   name:'Đồ dễ bỏ lỡ',          color:'#ef4444',
-      icon:'<path d="M12 4L2.5 20h19z"/><path d="M12 10v4.5"/><path d="M12 17.3v.1"/>' },
-    { id:'card',       name:'Người chơi bài',       color:'#38bdf8',
-      icon:'<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M12 8l2.2 3.5L12 15l-2.2-3.5z"/>' },
-    { id:'synth',      name:'Tiệm tổng hợp',        color:'#2dd4bf',
-      icon:'<path d="M10 3v6l-5.2 9a2 2 0 0 0 1.7 3h11a2 2 0 0 0 1.7-3L14 9V3"/><path d="M9 3h6"/><path d="M7.5 14h9"/>' },
-  ],
-  /* Phương tiện di chuyển. cost = hệ số nhân quãng đường khi tìm
-     đường ngắn nhất — số càng nhỏ thì tuyến đó càng được ưu tiên. */
-  links: [
-    { id:'walk',    name:'Đi bộ',      color:'#e2e8f0', cost:1.00 },
-    { id:'boat',    name:'Đi tàu',     color:'#38bdf8', cost:0.55 },
-    { id:'chocobo', name:'Chocobo',    color:'#fde047', cost:0.65 },
-    { id:'airship', name:'Phi thuyền', color:'#c084fc', cost:0.25 },
-    { id:'gargant', name:'Gargant',   color:'#f472b6', cost:0.40 },
-  ],
+  /* Bộ dữ liệu nạp lúc khởi động. Slice sau thay bằng data/games.js. */
+  dataFiles: ['data/ffix.js'],
+
   zoom: {
     min: 0.05, max: 8,
     wheel: 0.0016,   // nhỏ hơn = lăn chuột zoom chậm hơn
     step: 1.3,       // mức zoom của nút + / −
     maxPerEvent: 1.22, // chặn một cú lăn mạnh làm nhảy vọt
   },
+  limits: {
+    /* Mỗi marker là một phần tử DOM. FFIX 44 điểm thì thoải mái, nhưng
+       game open world có thể 1000–3000 điểm, mà cách vẽ bằng DOM hiện
+       tại đuối dần từ khoảng 500 trở lên.
+
+       CHƯA tối ưu ở đây — chỉ cảnh báo ra console. Khi thật sự cần thì
+       có hai đường: (a) vẽ marker bằng <canvas> và chỉ dựng DOM cho
+       điểm đang mở bảng chi tiết, hoặc (b) giữ DOM nhưng chỉ dựng phần
+       lọt khung nhìn, dựng lại khi pan/zoom xong. */
+    markerDom: 500,
+  },
 };
 
-/* Điểm đặt sẵn theo ảnh bản đồ thế giới. Vào chế độ biên tập là
-   kéo chỉnh, đổi tên, đổi nhóm hoặc xoá được hết. */
-const SEED = [
-  ['world','town','Alexandria',0.862,0.585,''],
-  ['world','port','Alexandria Harbor',0.814,0.593,'Cảng của tàu Blue Narciss'],
-  ['world','town','Lindblum',0.571,0.843,''],
-  ['world','port','Lindblum Harbor',0.534,0.854,'Cảng của tàu Blue Narciss'],
-  ['world','town','Treno',0.807,0.764,''],
-  ['world','town','Dali',0.672,0.651,''],
-  ['world','town','Burmecia',0.608,0.600,''],
-  ['world','town','Cleyra',0.564,0.645,''],
-  ['world','town','Conde Petie',0.561,0.366,''],
-  ['world','town','Madain Sari',0.576,0.267,''],
-  ['world','town','Black Mage Village',0.611,0.388,''],
-  ['world','town','Esto Gaza',0.246,0.299,''],
-  ['world','town','Daguerreo',0.229,0.805,''],
-  ['world','town',"Quan's Dwelling",0.895,0.742,''],
-
-  ['world','dungeon','Evil Forest',0.768,0.608,''],
-  ['world','dungeon','Ice Cavern',0.729,0.671,''],
-  ['world','dungeon',"Gizamaluke's Grotto",0.619,0.708,''],
-  ['world','dungeon','Fossil Roo',0.576,0.398,''],
-  ['world','dungeon',"Ipsen's Castle",0.119,0.455,''],
-  ['world','dungeon','Oeilvert',0.246,0.663,''],
-  ['world','dungeon','Desert Palace',0.777,0.301,''],
-  ['world','dungeon','Pinnacle Rocks',0.613,0.829,''],
-  ['world','dungeon','Mountain Path',0.558,0.301,''],
-  ['world','dungeon','Observatory Mountain',0.696,0.652,''],
-  ['world','dungeon','Lifa Tree',0.480,0.352,''],
-
-  ['world','shrine','Fire Shrine',0.317,0.211,''],
-  ['world','shrine','Water Shrine',0.129,0.531,''],
-  ['world','shrine','Wind Shrine',0.314,0.718,''],
-  ['world','shrine','Earth Shrine',0.736,0.376,''],
-  ['world','shrine','Shimmering Island',0.279,0.351,''],
-
-  ['world','gate','North Gate',0.649,0.629,''],
-  ['world','gate','South Gate',0.737,0.739,''],
-  ['world','gate',"Dragon's Gate",0.569,0.798,''],
-
-  ['world','chocobo',"Chocobo's Forest",0.663,0.759,''],
-  ['world','chocobo',"Chocobo's Lagoon",0.369,0.868,''],
-  ['world','chocobo',"Chocobo's Paradise",0.071,0.148,''],
-
-  ['world','qu',"Qu's Marsh — Mist",0.589,0.749,''],
-  ['world','qu',"Qu's Marsh — Outer",0.649,0.345,''],
-  ['world','qu',"Qu's Marsh — Forgotten",0.210,0.463,''],
-  ['world','qu',"Qu's Marsh — Lost",0.184,0.746,''],
-
-  ['world','special','Mognet Central',0.671,0.214,''],
-
-  // Tàu Blue Narciss đáp được cả bãi biển, nên ba điểm dưới là chỗ cập
-  // bến ƯỚC LƯỢNG cho ba lục địa còn lại — kéo về đúng bãi thật.
-  ['world','port','Bãi đáp — Outer',0.503,0.404,'Vị trí ước lượng, kéo chỉnh'],
-  ['world','port','Bãi đáp — Forgotten',0.196,0.700,'Vị trí ước lượng, kéo chỉnh'],
-  ['world','port','Bãi đáp — Lost',0.272,0.333,'Vị trí ước lượng, kéo chỉnh'],
-];
+/* Bộ dữ liệu game đang mở — gán trong applyGame(). Engine không được
+   giả định bất kỳ id nhóm hay id phương tiện nào của riêng game nào. */
+let GAME = null;
 
 /* ================= trạng thái ================= */
 const $ = s => document.querySelector(s);
-const catById  = new Map(CONFIG.cats.map(c => [c.id, c]));
-const linkById = new Map(CONFIG.links.map(c => [c.id, c]));
+let catById  = new Map();
+let linkById = new Map();
 const NS = 'http://www.w3.org/2000/svg';
 /* Ký hiệu nhóm. Vẽ bằng SVG nội tuyến nên không lệ thuộc font hay emoji
    của hệ điều hành — máy nào cũng hiện giống nhau. */
@@ -440,7 +360,7 @@ let markers = [];
 let edges = [];                 // {id, map, a, b, type}
 let found = new Set();
 let hidden = new Set();
-let curMap = CONFIG.maps[0].id;
+let curMap = null;
 let editing = false, linking = false;
 let selected = null, linkFrom = null;
 let routeA = null, routeB = null, pickMode = null, routePath = [];
@@ -456,13 +376,7 @@ const viewport = $('#viewport'), world = $('#world');
 const img = $('#mapimg'), pinsEl = $('#pins'), fallback = $('#fallback'), svg = $('#links');
 
 /* ================= lưu trữ ================= */
-const K = {
-  data:   CONFIG.store + '.data',
-  edges:  CONFIG.store + '.edges',
-  found:  CONFIG.store + '.found',
-  hidden: CONFIG.store + '.hidden',
-  theme:  CONFIG.store + '.theme',
-};
+let K = {};   // khoá localStorage — tính theo game trong applyGame()
 function load(key, fb){
   try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; }
   catch{ return fb; }
@@ -471,7 +385,11 @@ function save(key, val){
   try{ localStorage.setItem(key, JSON.stringify(val)); } catch{ /* chế độ riêng tư */ }
 }
 const seedMarkers = () =>
-  SEED.map((r,i) => ({ id:i+1, map:r[0], cat:r[1], name:r[2], x:r[3], y:r[4], note:r[5] }));
+  GAME.seed.map((r,i) => ({ id:i+1, map:r[0], cat:r[1], name:r[2], x:r[3], y:r[4], note:r[5] }));
+
+/* Cờ tính năng. Thiếu khoá thì coi như BẬT — bộ dữ liệu cũ không khai
+   features vẫn chạy đủ như trước. */
+const feat = k => !GAME || (GAME.features || {})[k] !== false;
 
 function boot(){
   const saved = load(K.data, null);
@@ -709,7 +627,16 @@ function renderEdges(){
   svg.appendChild(frag);
 }
 
+let warnedScale = false;
 function renderPins(){
+  const onMap = markers.filter(p => p.map === curMap).length;
+  if (!warnedScale && onMap > CONFIG.limits.markerDom){
+    warnedScale = true;
+    console.warn('[bản đồ] ' + onMap + ' marker trên một bản đồ, vượt ngưỡng ' +
+      CONFIG.limits.markerDom + ' mà cách vẽ bằng DOM chịu được. Pan/zoom sẽ bắt đầu giật. ' +
+      'Hướng xử lý: vẽ marker bằng <canvas>, hoặc chỉ dựng DOM cho phần lọt khung nhìn ' +
+      '(xem CONFIG.limits.markerDom).');
+  }
   pinsEl.textContent = '';
   const frag = document.createDocumentFragment();
   for (const p of markers){
@@ -739,7 +666,7 @@ function renderPins(){
 function renderCats(){
   const box = $('#catlist');
   box.textContent = '';
-  for (const c of CONFIG.cats){
+  for (const c of GAME.cats){
     const all = markers.filter(p => p.map === curMap && p.cat === c.id);
     if (all.length === 0 && !editing) continue;
     const got = all.filter(p => found.has(p.id)).length;
@@ -747,7 +674,8 @@ function renderCats(){
     b.className = 'cat' + (hidden.has(c.id) ? ' off' : '');
     b.innerHTML =
       '<span class="sw" style="background:' + c.color + '">' + glyph(c.id) + '</span>' +
-      '<span class="nm"></span><span class="ct">' + got + '/' + all.length + '</span>';
+      '<span class="nm"></span><span class="ct">' +
+      (feat('progress') ? got + '/' + all.length : String(all.length)) + '</span>';
     b.querySelector('.nm').textContent = c.name;
     b.addEventListener('click', () => {
       hidden.has(c.id) ? hidden.delete(c.id) : hidden.add(c.id);
@@ -758,12 +686,18 @@ function renderCats(){
   }
 }
 function renderProgress(){
+  if (!feat('progress')) return;
   const all = markers.filter(p => p.map === curMap);
   const got = all.filter(p => found.has(p.id)).length;
   $('#pTxt').textContent = got + ' / ' + all.length;
   $('#pBar').style.width = all.length ? (got / all.length * 100) + '%' : '0%';
 }
-const refresh = () => { renderPins(); renderCats(); renderProgress(); renderRoute(); };
+const refresh = () => {
+  renderPins(); renderCats(); renderProgress();
+  /* routing tắt thì không có khung Chỉ đường để vẽ vào, nhưng tuyến
+     trên bản đồ vẫn phải được vẽ — nên gọi thẳng renderEdges(). */
+  feat('routing') ? renderRoute() : renderEdges();
+};
 
 /* ================= bảng chi tiết ================= */
 function openDetail(id){
@@ -779,18 +713,24 @@ function openDetail(id){
     body.innerHTML =
       '<div style="color:var(--muted);font-size:12.5px">' + esc(c.name) + '</div>' +
       (p.note ? '<div class="note">' + esc(p.note) + '</div>' : '') +
-      '<label class="chk"><input type="checkbox" id="dFound"' + (found.has(p.id) ? ' checked' : '') +
-      '><span>Đã hoàn thành</span></label>' +
-      '<div class="row"><button class="btn" id="dA">① Đi từ đây</button>' +
-      '<button class="btn" id="dB">② Đến đây</button></div>';
-    $('#dFound').addEventListener('change', e => {
+      (feat('progress')
+        ? '<label class="chk"><input type="checkbox" id="dFound"' + (found.has(p.id) ? ' checked' : '') +
+          '><span>Đã hoàn thành</span></label>'
+        : '') +
+      (feat('routing')
+        ? '<div class="row"><button class="btn" id="dA">① Đi từ đây</button>' +
+          '<button class="btn" id="dB">② Đến đây</button></div>'
+        : '');
+    if (feat('progress')) $('#dFound').addEventListener('change', e => {
       e.target.checked ? found.add(p.id) : found.delete(p.id);
       save(K.found, [...found]); refresh();
     });
-    $('#dA').addEventListener('click', () => { routeA = p.id; refresh(); });
-    $('#dB').addEventListener('click', () => { routeB = p.id; refresh(); });
+    if (feat('routing')){
+      $('#dA').addEventListener('click', () => { routeA = p.id; refresh(); });
+      $('#dB').addEventListener('click', () => { routeB = p.id; refresh(); });
+    }
   } else {
-    const opts = CONFIG.cats.map(x =>
+    const opts = GAME.cats.map(x =>
       '<option value="' + x.id + '"' + (x.id === p.cat ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('');
     const deg = neighbours(p.id).length;
     body.innerHTML =
@@ -925,7 +865,7 @@ function endPointer(ev){
     const x = (ev.clientX - r.left - view.x) / view.s / imgW;
     const y = (ev.clientY - r.top  - view.y) / view.s / imgH;
     if (x < 0 || x > 1 || y < 0 || y > 1) return;
-    const cat = CONFIG.cats.find(c => !hidden.has(c.id)) || CONFIG.cats[0];
+    const cat = GAME.cats.find(c => !hidden.has(c.id)) || GAME.cats[0];
     const p = { id:nextId++, map:curMap, cat:cat.id, name:'Điểm mới', x, y, note:'' };
     markers.push(p);
     persist(); refresh(); openDetail(p.id);
@@ -982,7 +922,7 @@ function runSearch(){
   }
   for (const p of hits){
     const c = catById.get(p.cat) || { color:'#9ca3af', name:p.cat };
-    const mp = CONFIG.maps.find(m => m.id === p.map);
+    const mp = GAME.maps.find(m => m.id === p.map);
     const b = document.createElement('button');
     b.innerHTML = '<span class="sw" style="background:' + c.color + '"></span><span></span><small>' +
                   esc(mp ? mp.name : p.map) + '</small>';
@@ -1010,7 +950,7 @@ document.addEventListener('click', ev => {
 /* ================= bản đồ ================= */
 function switchMap(id, silent){
   curMap = id;
-  const m = CONFIG.maps.find(x => x.id === id);
+  const m = GAME.maps.find(x => x.id === id);
   $('#mapName').textContent = m ? m.name : id;
   routeA = routeB = null; routePath = []; linkFrom = null;
   img.onload = () => {
@@ -1021,6 +961,8 @@ function switchMap(id, silent){
   };
   img.onerror = () => {
     imgW = 2000; imgH = 2000;
+    $('#fbTitle').textContent = 'Chưa có ảnh bản đồ';
+    $('#fbText').innerHTML = 'Đặt ảnh vào <code>' + esc(m ? m.src : '—') + '</code>';
     img.style.display = 'none'; fallback.style.display = 'grid';
     if (!silent) fit();
     refresh();
@@ -1030,8 +972,6 @@ function switchMap(id, silent){
 }
 
 /* ================= nút bấm ================= */
-$('#mapSel').innerHTML  = CONFIG.maps.map(m => '<option value="' + m.id + '">' + esc(m.name) + '</option>').join('');
-$('#linkType').innerHTML = CONFIG.links.map(t => '<option value="' + t.id + '">' + esc(t.name) + '</option>').join('');
 $('#mapSel').addEventListener('change', e => switchMap(e.target.value));
 $('#zIn').addEventListener('click', () => zoomCenter(CONFIG.zoom.step));
 $('#zOut').addEventListener('click', () => zoomCenter(1 / CONFIG.zoom.step));
@@ -1041,7 +981,7 @@ $('#dClose').addEventListener('click', closeDetail);
 
 $('#allOn').addEventListener('click', () => { hidden.clear(); save(K.hidden, []); refresh(); });
 $('#allOff').addEventListener('click', () => {
-  CONFIG.cats.forEach(c => hidden.add(c.id)); save(K.hidden, [...hidden]); refresh();
+  GAME.cats.forEach(c => hidden.add(c.id)); save(K.hidden, [...hidden]); refresh();
 });
 
 function syncPickBtns(){
@@ -1094,37 +1034,44 @@ function autoConnect(pctIn){
   if (!add.length){ alert('Không có cặp điểm nào trong bán kính ' + pct + '%.'); return; }
   if (!confirm('Tạo ' + add.length + ' tuyến đi bộ giữa các điểm cách nhau dưới ' + pct + '% chiều rộng bản đồ?\n\n' +
                'Máy không phân biệt được đất liền và biển, nên sẽ có đường nối lố qua biển — xoá bằng cách bấm lên tuyến đó.')) return;
-  for (const [a,b] of add) edges.push({ id:nextEdge++, map:curMap, a, b, type:'walk' });
+  const walk = (GAME.rules || {}).walkLink || GAME.links[0].id;
+  for (const [a,b] of add) edges.push({ id:nextEdge++, map:curMap, a, b, type:walk });
   persistE(); refresh();
 }
 $('#autoBtn').addEventListener('click', () => autoConnect());
 
-/* Đường biển trong FF9 không phải mạng tuyến cố định: tàu Blue Narciss
-   cập hai cảng Alexandria / Lindblum và đáp được bãi biển bất kỳ. Nên mô
-   hình ở đây là: mọi điểm thuộc nhóm "Bến tàu" đều đi tới nhau được.
-   Riêng Fossil Roo là hầm gargant nối Mist với Outer Continent. */
-const DOCKS = [
-  ['Bãi đáp — Outer',     0.503, 0.404],
-  ['Bãi đáp — Forgotten', 0.196, 0.700],
-  ['Bãi đáp — Lost',      0.272, 0.333],
-];
+/* Nối đầy đủ các điểm thuộc nhóm "đầu mối" với nhau, cộng thêm vài
+   tuyến đặc biệt. LUẬT NẰM Ở BỘ DỮ LIỆU GAME (GAME.rules), engine
+   không biết 'port' hay 'boat' là gì — trước đây mấy chuỗi đó nằm
+   thẳng trong hàm này nên game khác nạp vào là sai ngay. */
 function portConnect(){
-  let ports = markers.filter(p => p.map === curMap && p.cat === 'port');
+  const R = GAME.rules || {};
+  if (!R.hubCat || !R.hubLink){
+    alert('Bộ dữ liệu "' + GAME.name + '" không khai luật nối đầu mối.');
+    return;
+  }
+  const hubName = (catById.get(R.hubCat) || {}).name || R.hubCat;
+  let ports = markers.filter(p => p.map === curMap && p.cat === R.hubCat);
 
   if (ports.length < 2){
-    if (!confirm('Chưa đủ điểm cập bến.\n\nTạo sẵn bãi đáp cho từng lục địa ' +
-                 '(vị trí ước lượng, kéo chỉnh sau) rồi nối đường biển?')) return;
-    for (const [name, x, y] of DOCKS){
-      if (markers.some(p => p.map === curMap && p.name === name)) continue;
-      markers.push({ id:nextId++, map:curMap, cat:'port', name, x, y,
+    const seedable = (R.hubSeed || []).length;
+    if (!seedable){
+      alert('Bản đồ chưa có đủ 2 điểm thuộc nhóm "' + hubName + '" để nối.');
+      return;
+    }
+    if (!confirm('Chưa đủ điểm thuộc nhóm "' + hubName + '".\n\nTạo sẵn ' + seedable +
+                 ' điểm (vị trí ước lượng, kéo chỉnh sau) rồi nối với nhau?')) return;
+    for (const d of R.hubSeed){
+      if (markers.some(p => p.map === curMap && p.name === d.name)) continue;
+      markers.push({ id:nextId++, map:curMap, cat:R.hubCat, name:d.name, x:d.x, y:d.y,
                      note:'Vị trí ước lượng, kéo chỉnh' });
     }
-    for (const nm of ['Alexandria Harbor', 'Lindblum Harbor']){
+    for (const nm of (R.hubPromote || [])){
       const h = markers.find(p => p.map === curMap && p.name === nm);
-      if (h) h.cat = 'port';
+      if (h) h.cat = R.hubCat;
     }
     persist();
-    ports = markers.filter(p => p.map === curMap && p.cat === 'port');
+    ports = markers.filter(p => p.map === curMap && p.cat === R.hubCat);
   }
 
   const key = (a,b) => Math.min(a,b) + ':' + Math.max(a,b);
@@ -1138,15 +1085,18 @@ function portConnect(){
 
   for (let i = 0; i < ports.length; i++)
     for (let j = i+1; j < ports.length; j++)
-      addEdge(ports[i].id, ports[j].id, 'boat');
+      addEdge(ports[i].id, ports[j].id, R.hubLink);
 
-  const qu = markers.find(p => p.map === curMap && p.name === "Qu's Marsh — Mist");
-  const fr = markers.find(p => p.map === curMap && p.name === 'Fossil Roo');
-  if (qu && fr) addEdge(qu.id, fr.id, 'gargant');
+  /* Tuyến đặc biệt khai theo TÊN điểm trong bộ dữ liệu game. */
+  for (const x of (R.extraEdges || [])){
+    const A = markers.find(p => p.map === curMap && p.name === x.from);
+    const B = markers.find(p => p.map === curMap && p.name === x.to);
+    if (A && B) addEdge(A.id, B.id, x.type || R.hubLink);
+  }
 
   persistE(); refresh();
-  alert(n ? 'Đã thêm ' + n + ' tuyến: đường biển giữa các bến + hầm gargant Fossil Roo.'
-          : 'Các bến tàu đã nối đủ với nhau rồi.');
+  alert(n ? 'Đã thêm ' + n + ' tuyến nối các điểm nhóm "' + hubName + '".'
+          : 'Các điểm nhóm "' + hubName + '" đã nối đủ với nhau rồi.');
 }
 $('#portBtn').addEventListener('click', portConnect);
 
@@ -1165,7 +1115,7 @@ $('#expBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ version:2, markers, edges }, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = CONFIG.store + '-markers.json';
+  a.download = GAME.id + '-markers.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
@@ -1180,14 +1130,14 @@ $('#impFile').addEventListener('change', async e => {
     if (!Array.isArray(list)) throw new Error('sai định dạng');
     markers = list.filter(p => p && typeof p.x === 'number' && typeof p.y === 'number')
                   .map((p,i) => ({
-                    id: p.id || i+1, map: p.map || CONFIG.maps[0].id,
-                    cat: p.cat || CONFIG.cats[0].id, name: p.name || 'Không tên',
+                    id: p.id || i+1, map: p.map || GAME.maps[0].id,
+                    cat: p.cat || GAME.cats[0].id, name: p.name || 'Không tên',
                     x: p.x, y: p.y, note: p.note || '',
                   }));
     edges = Array.isArray(data.edges)
       ? data.edges.filter(x => x && x.a != null && x.b != null)
-                  .map((x,i) => ({ id:x.id || i+1, map:x.map || CONFIG.maps[0].id,
-                                   a:x.a, b:x.b, type:x.type || CONFIG.links[0].id }))
+                  .map((x,i) => ({ id:x.id || i+1, map:x.map || GAME.maps[0].id,
+                                   a:x.a, b:x.b, type:x.type || GAME.links[0].id }))
       : [];
     nextId   = markers.reduce((m,p) => Math.max(m, p.id), 0) + 1;
     nextEdge = edges.reduce((m,x) => Math.max(m, x.id), 0) + 1;
@@ -1230,10 +1180,80 @@ document.addEventListener('keydown', ev => {
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { clampView(); applyView(); }, 120); });
 
+/* ================= nạp bộ dữ liệu game ================= */
+/* Thẻ <script> chèn động, KHÔNG fetch() và KHÔNG import: mở trang bằng
+   file:// thì hai cách kia bị CORS chặn, còn thẻ script thì không.
+   [ĐO 2026-09-20, Chromium, file://] nạp OK, và file thiếu có bắn
+   onerror — nên bắt được lỗi thay vì treo im lặng. */
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = false;                       // giữ đúng thứ tự khai báo
+    s.onload  = () => res();
+    s.onerror = () => rej(new Error('Không nạp được ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+function fatal(msg){
+  $('#fbTitle').textContent = 'Không nạp được dữ liệu';
+  $('#fbText').innerHTML = esc(msg) +
+    '<br><br>Mở bằng <code>file://</code> thì thư mục <code>data/</code> phải nằm cạnh ' +
+    '<code>index.html</code>.';
+  fallback.style.display = 'grid';
+  img.style.display = 'none';
+}
+
+/* Gắn một bộ dữ liệu game vào engine. Mọi thứ phụ thuộc game đều được
+   tính lại ở đây — engine không giữ hằng số nào của riêng game nào. */
+function applyGame(g){
+  GAME     = g;
+  catById  = new Map(g.cats.map(c => [c.id, c]));
+  linkById = new Map(g.links.map(c => [c.id, c]));
+  K = {
+    data:   g.store + '.data',
+    edges:  g.store + '.edges',
+    found:  g.store + '.found',
+    hidden: g.store + '.hidden',
+    theme:  g.store + '.theme',
+  };
+  curMap = g.maps[0].id;
+  warnedScale = false;
+
+  $('#mapSel').innerHTML   = g.maps.map(m =>
+    '<option value="' + m.id + '">' + esc(m.name) + '</option>').join('');
+  $('#linkType').innerHTML = g.links.map(t =>
+    '<option value="' + t.id + '">' + esc(t.name) + '</option>').join('');
+
+  /* Cờ tính năng: ẩn HẲN khối, không phải làm mờ. Game open world đặt
+     routing:false vì đi đâu cũng được — để lại một khung Chỉ đường bấm
+     không ăn thua thì tệ hơn là không có. */
+  const show = (sel, on) => { const el = $(sel); if (el) el.style.display = on ? '' : 'none'; };
+  show('#routeSec', feat('routing'));
+  show('#linkGrp',  feat('routing'));
+  show('#hubGrp',   feat('routing') && !!(g.rules || {}).hubCat);
+  show('#autoGrp',  feat('routing'));
+  show('#progSec',  feat('progress'));
+  show('#resetBtn', feat('progress'));
+}
+
 /* ================= khởi động ================= */
-boot();
-syncPickBtns();
-switchMap(curMap);
+(async () => {
+  try {
+    for (const f of CONFIG.dataFiles) await loadScript(f);
+  } catch(err){ fatal(err.message); return; }
+
+  const games = window.MAPGAMES || [];
+  if (!games.length){
+    fatal('data/ffix.js nạp được nhưng không đăng ký game nào vào window.MAPGAMES.');
+    return;
+  }
+  applyGame(games[0]);
+  boot();
+  syncPickBtns();
+  switchMap(curMap);
+})();
 })();
 </script>
 </body>

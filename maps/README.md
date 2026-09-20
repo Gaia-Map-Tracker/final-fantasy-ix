@@ -6,7 +6,7 @@
 maps/world.png
 ```
 
-Dùng đuôi khác (`.jpg`, `.webp`) thì sửa `CONFIG.maps[].src` trong `index.html`.
+Dùng đuôi khác (`.jpg`, `.webp`) thì sửa `maps[].src` trong `data/ffix.js`.
 
 ## Vì sao thư mục này trống trên repo
 
