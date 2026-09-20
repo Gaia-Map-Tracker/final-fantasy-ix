@@ -47,6 +47,18 @@ Bấm **✎ Biên tập**:
 - Kéo điểm → đổi vị trí
 - Bấm điểm → sửa tên, nhóm, ghi chú, hoặc xoá
 
+### Hoàn tác
+
+Nút **↶ Hoàn tác** trên thanh biên tập, hoặc `Ctrl/Cmd + Z`. Giữ **30 bước** gần
+nhất (10 bước nếu bản đồ có hơn 500 điểm — mỗi bước là một bản chụp nên bản đồ
+lớn thì nặng).
+
+Hoàn tác được: thêm / kéo / sửa / xoá điểm, nối và xoá tuyến, ⚓ Nối bến tàu,
+⚡ Nối gần, Nhập JSON, và ↺ Về dữ liệu gốc.
+
+**Tải lại trang là mất lịch sử hoàn tác** — nó chỉ sống trong phiên đang mở.
+Đổi game cũng xoá lịch sử, vì id điểm của game này trùng id của game kia.
+
 Xong thì **Xuất JSON** để sao lưu. **Nhập JSON** để nạp lại hoặc chia cho người khác.
 
 ## Ảnh bản đồ

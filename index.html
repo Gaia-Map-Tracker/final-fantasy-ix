@@ -298,6 +298,9 @@ textarea{resize:vertical; min-height:62px}
     <button id="toggleSide" title="Ẩn/hiện bảng bên">☰</button>
     <div id="editbar">
       <span id="ebText">✎ Bấm bản đồ để thêm điểm · kéo điểm để di chuyển</span>
+      <span class="grp">
+        <button class="btn" id="undoBtn" title="Hoàn tác (Ctrl/Cmd + Z)">↶ Hoàn tác</button>
+      </span>
       <span class="grp" id="linkGrp">
         <button class="btn" id="linkBtn">🔗 Nối điểm</button>
         <select id="linkType" title="Phương tiện cho tuyến sắp vẽ"></select>
@@ -524,6 +527,84 @@ function showImage(url, isObject){
   if (isObject) curObjectURL = url;
   img.src = url || '';
 }
+
+/* ================= hoàn tác ================= */
+/* Chụp nguyên trạng thái thay vì ghi lệnh nghịch đảo. Đắt hơn về bộ nhớ,
+   nhưng mỗi thao tác chỉ cần một dòng pushUndo() và không có cách nào
+   hoàn tác sai — còn lệnh nghịch đảo thì mỗi loại thao tác là một cơ hội
+   viết sai riêng, mà thao tác hàng loạt (nối bến tàu, nối gần, nhập JSON)
+   thì nghịch đảo càng rắc rối.
+
+   Stack KHÔNG lưu xuống localStorage: tải lại trang là mất. Lưu thì phải
+   ghi vài MB mỗi thao tác, mà undo xuyên phiên cũng không ai trông đợi. */
+const UNDO_MAX = 30;
+let undoStack = [];
+
+/* Bản đồ 1000–3000 điểm thì mỗi bản chụp nặng hẳn, nên giữ ít bước lại.
+   Xem CONFIG.limits.markerDom. */
+const undoCap = () => (markers.length > CONFIG.limits.markerDom ? 10 : UNDO_MAX);
+
+const takeSnapshot = label => ({
+  label,
+  markers: markers.map(p => ({ ...p })),
+  edges:   edges.map(e => ({ ...e })),
+  found:   [...found],
+});
+
+function pushUndo(label){
+  undoStack.push(takeSnapshot(label));
+  while (undoStack.length > undoCap()) undoStack.shift();
+  syncUndo();
+}
+
+/* Kéo điểm: phải chụp TRƯỚC khi kéo, nhưng lúc bấm xuống chưa biết người
+   dùng sẽ kéo hay chỉ bấm chọn. Nên chụp sẵn rồi chỉ ghi nhận khi thật
+   sự có di chuyển — bấm hụt không được đẻ ra một bước hoàn tác rỗng. */
+let pendingUndo = null;
+const holdUndo   = label => { pendingUndo = takeSnapshot(label); };
+const commitUndo = () => {
+  if (!pendingUndo) return;
+  undoStack.push(pendingUndo);
+  pendingUndo = null;
+  while (undoStack.length > undoCap()) undoStack.shift();
+  syncUndo();
+};
+const dropUndo = () => { pendingUndo = null; };
+
+function undo(){
+  const snap = undoStack.pop();
+  if (!snap) return;
+  markers = snap.markers;
+  edges   = snap.edges;
+  found   = new Set(snap.found);
+
+  /* nextId KHÔNG lùi lại: id đã cấp thì đừng cấp lại. Dùng lại một id vừa
+     bị hoàn tác là điểm mới thừa hưởng trạng thái "đã hoàn thành" của
+     điểm cũ — một lỗi rất khó lần ra. */
+  nextId   = Math.max(nextId,   markers.reduce((m,p) => Math.max(m, p.id), 0) + 1);
+  nextEdge = Math.max(nextEdge, edges.reduce((m,e) => Math.max(m, e.id), 0) + 1);
+
+  const alive = new Set(markers.map(p => p.id));
+  if (!alive.has(routeA))   routeA = null;
+  if (!alive.has(routeB))   routeB = null;
+  if (!alive.has(linkFrom)) linkFrom = null;
+  if (!alive.has(selected)) selected = null;
+
+  persist(); persistE(); save(K.found, [...found]);
+  closeDetail(); refresh(); syncUndo();
+}
+
+function syncUndo(){
+  const b = $('#undoBtn');
+  if (!b) return;
+  const n = undoStack.length;
+  b.disabled = !n;
+  b.style.opacity = n ? '' : '.45';
+  b.textContent = n ? '↶ Hoàn tác (' + n + ')' : '↶ Hoàn tác';
+  b.title = n ? 'Hoàn tác: ' + undoStack[n-1].label + ' — Ctrl/Cmd + Z' : 'Chưa có gì để hoàn tác';
+}
+
+$('#undoBtn').addEventListener('click', undo);
 
 /* ================= khung nhìn ================= */
 function applyView(){
@@ -862,12 +943,14 @@ function openDetail(id){
       '<div class="row"><button class="btn" id="eSave">Lưu</button>' +
       '<button class="btn danger" id="eDel">Xoá điểm</button></div>';
     $('#eSave').addEventListener('click', () => {
+      pushUndo('sửa điểm "' + p.name + '"');
       p.name = $('#eName').value.trim() || 'Không tên';
       p.cat  = $('#eCat').value;
       p.note = $('#eNote').value.trim();
       persist(); refresh(); openDetail(p.id);
     });
     $('#eDel').addEventListener('click', () => {
+      pushUndo('xoá điểm "' + p.name + '"');
       markers = markers.filter(m => m.id !== p.id);
       edges   = edges.filter(e => e.a !== p.id && e.b !== p.id);   // dọn tuyến mồ côi
       found.delete(p.id);
@@ -913,6 +996,7 @@ viewport.addEventListener('pointerdown', ev => {
 
   if (pinEl && editing && !linking){
     pinDrag = { el:pinEl, id:+pinEl.dataset.id, ox:ev.clientX, oy:ev.clientY };
+    holdUndo('di chuyển điểm');
     return;
   }
   drag = { px:ev.clientX, py:ev.clientY, vx:view.x, vy:view.y,
@@ -966,8 +1050,8 @@ function endPointer(ev){
   viewport.classList.remove('drag');
 
   if (pinDrag){
-    if (moved > 4){ persist(); renderEdges(); }
-    else { onPinClick(pinDrag.id); }
+    if (moved > 4){ commitUndo(); persist(); renderEdges(); }
+    else { dropUndo(); onPinClick(pinDrag.id); }
     pinDrag = null; return;
   }
   if (!drag) return;
@@ -979,6 +1063,7 @@ function endPointer(ev){
   if (edge && linking){
     const id = +edge.dataset.id;
     if (confirm('Xoá tuyến này?')){
+      pushUndo('xoá tuyến');
       edges = edges.filter(e => e.id !== id);
       persistE(); refresh();
     }
@@ -992,6 +1077,7 @@ function endPointer(ev){
     const y = (ev.clientY - r.top  - view.y) / view.s / imgH;
     if (x < 0 || x > 1 || y < 0 || y > 1) return;
     const cat = GAME.cats.find(c => !hidden.has(c.id)) || GAME.cats[0];
+    pushUndo('thêm điểm');
     const p = { id:nextId++, map:curMap, cat:cat.id, name:'Điểm mới', x, y, note:'' };
     markers.push(p);
     persist(); refresh(); openDetail(p.id);
@@ -1009,6 +1095,7 @@ function onPinClick(id){
     const type = $('#linkType').value;
     const dup = edges.find(e => e.map === curMap &&
       ((e.a === linkFrom && e.b === id) || (e.a === id && e.b === linkFrom)));
+    pushUndo(dup ? 'đổi phương tiện của tuyến' : 'nối tuyến');
     if (dup){ dup.type = type; }
     else { edges.push({ id:nextEdge++, map:curMap, a:linkFrom, b:id, type }); }
     linkFrom = null;
@@ -1274,6 +1361,7 @@ $('#showEdges').addEventListener('click', () => {
 
 function setEdit(on){
   editing = on;
+  syncUndo();
   if (!editing){ linking = false; linkFrom = null; }
   $('#editBtn').classList.toggle('on', editing);
   $('#editbar').classList.toggle('on', editing);
@@ -1302,6 +1390,7 @@ function autoConnect(pctIn){
   if (!add.length){ alert('Không có cặp điểm nào trong bán kính ' + pct + '%.'); return; }
   if (!confirm('Tạo ' + add.length + ' tuyến đi bộ giữa các điểm cách nhau dưới ' + pct + '% chiều rộng bản đồ?\n\n' +
                'Máy không phân biệt được đất liền và biển, nên sẽ có đường nối lố qua biển — xoá bằng cách bấm lên tuyến đó.')) return;
+  pushUndo('nối gần (' + add.length + ' tuyến)');
   const walk = (GAME.rules || {}).walkLink || GAME.links[0].id;
   for (const [a,b] of add) edges.push({ id:nextEdge++, map:curMap, a, b, type:walk });
   persistE(); refresh();
@@ -1329,6 +1418,7 @@ function portConnect(){
     }
     if (!confirm('Chưa đủ điểm thuộc nhóm "' + hubName + '".\n\nTạo sẵn ' + seedable +
                  ' điểm (vị trí ước lượng, kéo chỉnh sau) rồi nối với nhau?')) return;
+    pushUndo('tạo điểm "' + hubName + '"');
     for (const d of R.hubSeed){
       if (markers.some(p => p.map === curMap && p.name === d.name)) continue;
       markers.push({ id:nextId++, map:curMap, cat:R.hubCat, name:d.name, x:d.x, y:d.y,
@@ -1344,6 +1434,7 @@ function portConnect(){
 
   const key = (a,b) => Math.min(a,b) + ':' + Math.max(a,b);
   const has = new Set(edges.filter(e => e.map === curMap).map(e => key(e.a, e.b)));
+  const before = takeSnapshot('nối các điểm "' + hubName + '"');
   let n = 0;
   const addEdge = (a, b, type) => {
     if (has.has(key(a,b))) return;
@@ -1362,6 +1453,8 @@ function portConnect(){
     if (A && B) addEdge(A.id, B.id, x.type || R.hubLink);
   }
 
+  /* Chỉ ghi một bước hoàn tác khi thật sự có thêm tuyến. */
+  if (n){ undoStack.push(before); while (undoStack.length > undoCap()) undoStack.shift(); syncUndo(); }
   persistE(); refresh();
   alert(n ? 'Đã thêm ' + n + ' tuyến nối các điểm nhóm "' + hubName + '".'
           : 'Các điểm nhóm "' + hubName + '" đã nối đủ với nhau rồi.');
@@ -1396,6 +1489,7 @@ $('#impFile').addEventListener('change', async e => {
     const data = JSON.parse(await f.text());
     const list = Array.isArray(data) ? data : data.markers;
     if (!Array.isArray(list)) throw new Error('sai định dạng');
+    pushUndo('nhập JSON');
     markers = list.filter(p => p && typeof p.x === 'number' && typeof p.y === 'number')
                   .map((p,i) => ({
                     id: p.id || i+1, map: p.map || GAME.maps[0].id,
@@ -1432,6 +1526,12 @@ $('#themeBtn').addEventListener('click', () => {
 document.addEventListener('keydown', ev => {
   if (ev.target.matches('input,textarea,select')){
     if (ev.key === 'Escape') ev.target.blur();
+    return;
+  }
+  if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'z' || ev.key === 'Z')){
+    /* Chỉ trong chế độ biên tập: ngoài đó không có thao tác nào để hoàn
+       tác, mà Ctrl+Z lỡ tay lại lặng lẽ đổi dữ liệu thì khó hiểu. */
+    if (editing){ ev.preventDefault(); undo(); }
     return;
   }
   if (ev.key === '/'){ ev.preventDefault(); qEl.focus(); qEl.select(); }
@@ -1569,6 +1669,9 @@ async function selectGame(id){
   /* Trạng thái của game cũ phải dọn sạch: id marker của game này trùng
      id của game kia, để sót là tuyến trỏ lung tung. */
   routeA = routeB = null; routePath = []; pickMode = null; linkFrom = null;
+  /* id marker của game này trùng id của game kia, nên bản chụp cũ mà đem
+     áp vào game mới là trộn dữ liệu hai game. Bỏ hết. */
+  undoStack = []; pendingUndo = null;
 
   applyGame(g);
   boot();                 // đọc lại localStorage theo khoá của game mới
