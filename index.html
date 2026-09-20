@@ -131,6 +131,19 @@ textarea{resize:vertical; min-height:62px}
 }
 #fbNote.on{ display:block }
 
+/* Dải cảnh báo nằm trên bản đồ. Đặt z-index cao hơn #viewport vì viewport
+   đứng sau trong DOM (xem ghi chú ở #zoomctl). */
+#warnbar{
+  position:absolute; left:50%; transform:translateX(-50%); top:12px; z-index:6;
+  display:none; align-items:flex-start; gap:10px; max-width:min(680px, calc(100% - 96px));
+  background:var(--panel); border:1px solid #f59e0b; border-radius:10px;
+  padding:10px 12px; font-size:12.5px; line-height:1.55;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+#warnbar.on{ display:flex }
+#warnbar .txt{ flex:1 1 auto }
+#warnbar .btn{ flex:0 0 auto; padding:4px 9px }
+
 .pin{
   position:absolute; width:28px; height:28px; margin:-14px 0 0 -14px;
   border-radius:50%; border:2px solid rgba(0,0,0,.6);
@@ -321,6 +334,13 @@ textarea{resize:vertical; min-height:62px}
           <p style="margin:12px 0 0; opacity:.6; font-size:13px">Vẫn đặt và sửa marker bình thường được.</p>
         </div>
       </div>
+    </div>
+
+    <div id="warnbar">
+      <span>⚠️</span>
+      <span class="txt" id="warnTxt"></span>
+      <button class="btn" id="warnFix">Chọn ảnh khác</button>
+      <button class="btn" id="warnClose">✕</button>
     </div>
 
     <div id="zoomctl">
@@ -1060,6 +1080,7 @@ async function switchMap(id, silent){
   $('#mapName').textContent = m ? m.name : id;
   routeA = routeB = null; routePath = []; linkFrom = null;
   closeDetail();
+  warn(null);
 
   img.onload = () => {
     imgW = img.naturalWidth; imgH = img.naturalHeight;
@@ -1067,6 +1088,7 @@ async function switchMap(id, silent){
     fallback.style.display = 'none';
     if (!silent) fit(); else { clampView(); applyView(); }
     refresh();
+    checkAspect(m);
   };
   img.onerror = () => {
     /* Ảnh hỏng / link chết / file không có: quay về màn chọn ảnh thay vì
@@ -1097,6 +1119,40 @@ async function switchMap(id, silent){
   if (!silent) fit();
   refresh();
 }
+
+/* ================= kiểm tỉ lệ khung hình ================= */
+/* Toạ độ marker lưu theo tỉ lệ 0–1 của ảnh, nên đổi ĐỘ PHÂN GIẢI thì
+   không sao — 1400×1400 hay 2800×2800 đều đúng chỗ. Nhưng đổi TỈ LỆ
+   KHUNG HÌNH thì lệch sạch: ảnh 3:2 nạp vào bộ dữ liệu đặt theo ảnh 1:1
+   sẽ kéo giãn một chiều, và người dùng chỉ thấy "marker sai hết" mà
+   không biết vì sao. Nên nói thẳng ra ngay lúc nạp ảnh.
+
+   Ngưỡng 2%: ảnh cắt xén lặt vặt vài pixel thì bỏ qua, đừng làm phiền. */
+const ASPECT_TOLERANCE = 0.02;
+
+function checkAspect(m){
+  if (!m || !m.aspect || !imgW || !imgH) return warn(null);
+  const got  = imgW / imgH;
+  const want = m.aspect;
+  const off  = Math.abs(got - want) / want;
+  if (off <= ASPECT_TOLERANCE) return warn(null);
+
+  const fmt = r => (r >= 1 ? (r.toFixed(2) + ' : 1') : ('1 : ' + (1/r).toFixed(2)));
+  warn('Ảnh này tỉ lệ <b>' + fmt(got) + '</b> (' + imgW + '×' + imgH + '), ' +
+       'còn dữ liệu <b>' + esc(GAME.name) + '</b> được đặt theo ảnh tỉ lệ <b>' + fmt(want) + '</b> — ' +
+       'lệch <b>' + Math.round(off * 100) + '%</b>, nên <b>marker sẽ nằm sai chỗ</b>.<br>' +
+       'Dùng ảnh đúng tỉ lệ thì khớp ngay; hoặc cứ dùng ảnh này rồi vào ' +
+       '<b>✎ Biên tập</b> kéo chỉnh lại điểm.');
+}
+
+function warn(html){
+  const bar = $('#warnbar');
+  if (!html){ bar.classList.remove('on'); return; }
+  $('#warnTxt').innerHTML = html;
+  bar.classList.add('on');
+}
+$('#warnClose').addEventListener('click', () => warn(null));
+$('#warnFix').addEventListener('click', () => { warn(null); openImagePanel(null, true); });
 
 /* ================= chọn ảnh bản đồ ================= */
 /* closable = mở từ nút "🖼 Ảnh bản đồ" khi đang có ảnh sẵn, nên cho đóng

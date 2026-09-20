@@ -95,8 +95,14 @@ thì vẫn còn bản gốc mà lấy lại.
 
 ## Toạ độ lưu theo tỉ lệ 0–1
 
-Không lưu theo pixel. Nghĩa là **đổi ảnh bản đồ sang độ phân giải khác,
-marker vẫn nằm đúng chỗ** — miễn là khung hình giữ nguyên tỉ lệ.
+Không lưu theo pixel. Nghĩa là **đổi ảnh bản đồ sang độ phân giải khác, marker
+vẫn nằm đúng chỗ** — 1400×1400 hay 2800×2800 đều được.
+
+Nhưng **đổi tỉ lệ khung hình thì lệch hết**: ảnh 3:2 nạp vào bộ dữ liệu đặt theo
+ảnh 1:1 sẽ bị kéo giãn một chiều. Mỗi bộ dữ liệu khai `aspect` — tỉ lệ của ảnh
+mà toạ độ được đặt theo — và app cảnh báo ngay khi ảnh bạn chọn lệch quá **2%**,
+kèm số liệu cụ thể. Lệch dưới 2% (ảnh bị cắt xén vài pixel) thì bỏ qua, không
+làm phiền.
 
 ## Thêm bản đồ
 
