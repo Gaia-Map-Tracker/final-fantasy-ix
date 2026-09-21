@@ -23,6 +23,13 @@ Cập nhật: 2026-09-21
 
 ---
 
+## Định tuyến — đã có spec riêng
+
+Phần chỉ đường (đường cong bám địa hình, bốn chế độ di chuyển kiểu Google
+Maps, luật đáp phi thuyền, bảng địa hình Chocobo) đã bàn xong và chốt ở
+**[docs/SPEC-DINH-TUYEN.md](docs/SPEC-DINH-TUYEN.md)**. Đọc file đó trước
+khi động vào mục 1–4 dưới đây.
+
 ## Bốn việc còn lại, theo thứ tự đáng làm
 
 ### 1. Tuyến qua gate — RẺ, làm được ngay
