@@ -43,17 +43,47 @@ Engine đã đủ sức, chỉ chưa có dữ liệu. Mognet Central giờ khôn
 
 ### 3. Địa hình chặn đường — VỪA, cần code mới
 
-Tuyến hiện vẽ thẳng, nên có đường xuyên qua đồi núi. Nền tảng đã có:
-`tools/analyze-map.mjs` đọc pixel và tách vùng rồi.
+Tuyến hiện vẽ thẳng, nên có đường đi bộ xuyên qua núi. Ví dụ đo được:
+Dali ↔ Ice Cavern cắt qua **42% núi**, Burmecia ↔ North Gate **30% núi**.
+Nền tảng đã có: `tools/analyze-map.mjs` đọc pixel và tách vùng rồi.
 
-Hướng rẻ hơn, nên làm trước: phân loại màu thành *đi được / không đi được*
-(núi, rừng rậm), chạy A\* trên lưới để **tự sinh tuyến đúng**, rồi ship
-kết quả vào `data/` — app không phải tính gì lúc chạy, y như cách khối đất
-đang làm.
+🔴 **MỖI LỤC ĐỊA MỘT BẢNG MÀU VÀ MỘT BỘ LUẬT RIÊNG — đừng dùng ngưỡng
+toàn cục.** Chủ dự án nêu, và đo lại thì đúng, chênh rất xa:
 
-Hướng đắt: vẽ tuyến thành **đường cong bám địa hình**. Phải lưu polyline
-cho mỗi tuyến, đổi cả cách vẽ SVG lẫn cách bấm chọn tuyến để xoá. Chạm
-nhiều chỗ — chỉ làm khi thật sự cần.
+| Lục địa | Màu chiếm ưu thế | Nghĩa là |
+|---|---|---|
+| `lost` | `rgb(203,211,219)` **53.2%** | băng tuyết phủ hơn nửa lục địa |
+| `mist` | lục nhạt 15.4% · lục đậm 12.5% | đồng bằng, rừng |
+| `outer` | nâu vàng 17% · 16.2% | sa mạc, đất khô |
+| `forgotten` | nâu vàng 21.1% · 17.9% | **gần trùng bảng màu với `outer`** |
+
+Hai cái bẫy đi kèm:
+
+- Luật kiểu *"trắng/sáng = núi, không đi được"* nghe hợp lý, nhưng nó
+  **giết nguyên Lost Continent**: 53% lục địa đó là tuyết, mà Esto Gaza và
+  Fire Shrine nằm ngay trên tuyết và đi bộ được.
+- `outer` và `forgotten` **không phân biệt được bằng màu**. Chúng chỉ tách
+  ra nhờ khối đất — thêm một lý do giữ trường `land` ở từng điểm.
+
+⇒ Chỗ khai luật là **theo từng khối đất**, ví dụ thêm `lands: { mist: {...},
+lost: {...} }` vào `data/<game>.js`. Đừng nhét ngưỡng vào engine.
+
+🔴 **Ảnh không chứa luật game.** Cleyra chỉ vào được qua Gizamaluke's
+Grotto — đó là luật cốt truyện, không phải vì có núi chắn; các gate cũng
+vậy. Phân tích ảnh chặn được tuyến xuyên núi, **không thay được luật
+game**. Phần đó phải khai tay, và người khai phải là người biết game.
+
+⇒ Hướng nên làm: công cụ **soi tuyến** — liệt kê mọi tuyến đi bộ kèm phần
+trăm địa hình nó cắt qua (tính theo bảng màu của đúng lục địa đó), xếp cái
+đáng ngờ lên đầu, để người biết game duyệt từng cái. Máy đo, người quyết,
+không ai đoán. Kết quả chốt xong thì ship vào `data/` thành `seedEdges`.
+
+Hướng đắt hơn, để sau: vẽ tuyến thành **đường cong bám địa hình**. Phải lưu
+polyline cho mỗi tuyến, đổi cả cách vẽ SVG lẫn cách bấm chọn tuyến để xoá.
+
+⚠️ Bộ phân loại màu thử nghiệm hiện **nhầm ký hiệu địa danh vẽ sẵn trên
+ảnh thành núi** — lấy mẫu tại Alexandria giữa đồng bằng cũng ra "núi". Phải
+lọc ký hiệu và viền trước khi tin kết quả phân loại.
 
 ### 4. Vẽ tuyến vòng qua vịnh — ĐẮT, và chỉ là chuyện thẩm mỹ
 
