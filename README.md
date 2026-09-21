@@ -72,6 +72,22 @@ Hoàn tác được: thêm / kéo / sửa / xoá điểm, nối và xoá tuyến
 **Tải lại trang là mất lịch sử hoàn tác** — nó chỉ sống trong phiên đang mở.
 Đổi game cũng xoá lịch sử, vì id điểm của game này trùng id của game kia.
 
+### Tuyến đi bộ và khối đất liền
+
+**⚡ Nối gần** nối các điểm gần nhau bằng tuyến đi bộ. Nó biết đâu là biển:
+mỗi điểm trong `data/ffix.js` khai một **khối đất liền** (`mist`, `outer`,
+`forgotten`, `lost`, và các đảo lẻ), và hai điểm khác khối thì không nối đi bộ —
+chỗ đó phải đi tàu hoặc phi thuyền.
+
+Mấy giá trị khối đất không phải gõ tay: chúng đọc ra từ chính `maps/world.png`
+(tách nước khỏi đất rồi loang vùng), nên phản ánh đúng địa lý trong ảnh.
+
+**🧹 Dọn tuyến lố** xoá những tuyến đi bộ nối hai khối đất khác nhau — dùng khi
+bản đồ của bạn đã có sẵn tuyến từ bản cũ, hồi app còn chưa biết đâu là biển.
+
+⚠️ Đường tuyến vẽ thẳng, nên vài tuyến vẫn cắt ngang vịnh dù **hai đầu cùng một
+khối đất** — chỗ đó đi bộ được thật (vòng quanh vịnh), chỉ là nhìn lạ mắt.
+
 Xong thì **Xuất JSON** để sao lưu. **Nhập JSON** để nạp lại hoặc chia cho người khác.
 
 ## Ảnh bản đồ

@@ -93,62 +93,77 @@ window.MAPGAMES.push({
     { id:'gargant', name:'Gargant',   color:'#f472b6', cost:0.40 },
   ],
 
-  /* Điểm đặt sẵn: [map, nhóm, tên, x, y, ghi chú]. Toạ độ theo tỉ lệ
-     0–1 của ảnh. Vào chế độ biên tập là kéo chỉnh được hết. */
+  /* Điểm đặt sẵn: [map, nhóm, tên, x, y, ghi chú, KHỐI ĐẤT].
+
+     Khối đất = mảnh đất liền mà điểm đó đứng trên. Hai điểm khác khối thì
+     KHÔNG đi bộ sang nhau được, phải tàu hoặc phi thuyền — engine dùng
+     đúng một thông tin này để "⚡ Nối gần" thôi vẽ đường đi bộ xuyên biển.
+
+     [ĐO 2026-09-21] Các giá trị dưới đây suy ra từ CHÍNH ảnh bản đồ, không
+     phải gõ tay: đọc pixel maps/world.png (nước = xanh dương trội, chiếm
+     71.2% ảnh), loang vùng để tách 148 mảnh đất, rồi xem mỗi điểm rơi vào
+     mảnh nào. Bốn mảnh lớn nhất nhận đúng bốn lục địa của game — Alexandria
+     / Lindblum / Treno ở 'mist', Madain Sari / Conde Petie / Black Mage
+     Village ở 'outer', Ipsen's Castle / Oeilvert ở 'forgotten', Esto Gaza ở
+     'lost' — nên tên gọi là đặt theo game, còn việc CHIA mảnh là đo được.
+     Tiền tố i- là đảo lẻ, mỗi đảo một hoặc hai điểm.
+
+     Đổi ảnh bản đồ sang ảnh khác thì mấy giá trị này vẫn đúng, vì chúng nói
+     về địa lý của game chứ không về ảnh. */
   seed: [
-  ['world','town','Alexandria',0.862,0.585,''],
-  ['world','port','Alexandria Harbor',0.814,0.593,'Cảng của tàu Blue Narciss'],
-  ['world','town','Lindblum',0.571,0.843,''],
-  ['world','port','Lindblum Harbor',0.534,0.854,'Cảng của tàu Blue Narciss'],
-  ['world','town','Treno',0.807,0.764,''],
-  ['world','town','Dali',0.672,0.651,''],
-  ['world','town','Burmecia',0.608,0.600,''],
-  ['world','town','Cleyra',0.564,0.645,''],
-  ['world','town','Conde Petie',0.561,0.366,''],
-  ['world','town','Madain Sari',0.576,0.267,''],
-  ['world','town','Black Mage Village',0.611,0.388,''],
-  ['world','town','Esto Gaza',0.246,0.299,''],
-  ['world','town','Daguerreo',0.229,0.805,''],
-  ['world','town',"Quan's Dwelling",0.895,0.742,''],
+  ['world','town','Alexandria',0.862,0.585,'','mist'],
+  ['world','port','Alexandria Harbor',0.814,0.593,'Cảng của tàu Blue Narciss','mist'],
+  ['world','town','Lindblum',0.571,0.843,'','mist'],
+  ['world','port','Lindblum Harbor',0.534,0.854,'Cảng của tàu Blue Narciss','mist'],
+  ['world','town','Treno',0.807,0.764,'','mist'],
+  ['world','town','Dali',0.672,0.651,'','mist'],
+  ['world','town','Burmecia',0.608,0.600,'','mist'],
+  ['world','town','Cleyra',0.564,0.645,'','mist'],
+  ['world','town','Conde Petie',0.561,0.366,'','outer'],
+  ['world','town','Madain Sari',0.576,0.267,'','outer'],
+  ['world','town','Black Mage Village',0.611,0.388,'','outer'],
+  ['world','town','Esto Gaza',0.246,0.299,'','lost'],
+  ['world','town','Daguerreo',0.229,0.805,'','i-daguerreo'],
+  ['world','town',"Quan's Dwelling",0.895,0.742,'','mist'],
 
-  ['world','dungeon','Evil Forest',0.768,0.608,''],
-  ['world','dungeon','Ice Cavern',0.729,0.671,''],
-  ['world','dungeon',"Gizamaluke's Grotto",0.619,0.708,''],
-  ['world','dungeon','Fossil Roo',0.576,0.398,''],
-  ['world','dungeon',"Ipsen's Castle",0.119,0.455,''],
-  ['world','dungeon','Oeilvert',0.246,0.663,''],
-  ['world','dungeon','Desert Palace',0.777,0.301,''],
-  ['world','dungeon','Pinnacle Rocks',0.613,0.829,''],
-  ['world','dungeon','Mountain Path',0.558,0.301,''],
-  ['world','dungeon','Observatory Mountain',0.696,0.652,''],
-  ['world','dungeon','Lifa Tree',0.480,0.352,''],
+  ['world','dungeon','Evil Forest',0.768,0.608,'','mist'],
+  ['world','dungeon','Ice Cavern',0.729,0.671,'','mist'],
+  ['world','dungeon',"Gizamaluke's Grotto",0.619,0.708,'','mist'],
+  ['world','dungeon','Fossil Roo',0.576,0.398,'','outer'],
+  ['world','dungeon',"Ipsen's Castle",0.119,0.455,'','forgotten'],
+  ['world','dungeon','Oeilvert',0.246,0.663,'','forgotten'],
+  ['world','dungeon','Desert Palace',0.777,0.301,'','outer'],
+  ['world','dungeon','Pinnacle Rocks',0.613,0.829,'','mist'],
+  ['world','dungeon','Mountain Path',0.558,0.301,'','outer'],
+  ['world','dungeon','Observatory Mountain',0.696,0.652,'','mist'],
+  ['world','dungeon','Lifa Tree',0.480,0.352,'','outer'],
 
-  ['world','shrine','Fire Shrine',0.317,0.211,''],
-  ['world','shrine','Water Shrine',0.129,0.531,''],
-  ['world','shrine','Wind Shrine',0.314,0.718,''],
-  ['world','shrine','Earth Shrine',0.736,0.376,''],
-  ['world','shrine','Shimmering Island',0.279,0.351,''],
+  ['world','shrine','Fire Shrine',0.317,0.211,'','lost'],
+  ['world','shrine','Water Shrine',0.129,0.531,'','i-water-shrine'],
+  ['world','shrine','Wind Shrine',0.314,0.718,'','forgotten'],
+  ['world','shrine','Earth Shrine',0.736,0.376,'','outer'],
+  ['world','shrine','Shimmering Island',0.279,0.351,'','i-shimmering'],
 
-  ['world','gate','North Gate',0.649,0.629,''],
-  ['world','gate','South Gate',0.737,0.739,''],
-  ['world','gate',"Dragon's Gate",0.569,0.798,''],
+  ['world','gate','North Gate',0.649,0.629,'','mist'],
+  ['world','gate','South Gate',0.737,0.739,'','mist'],
+  ['world','gate',"Dragon's Gate",0.569,0.798,'','mist'],
 
-  ['world','chocobo',"Chocobo's Forest",0.663,0.759,''],
-  ['world','chocobo',"Chocobo's Lagoon",0.369,0.868,''],
-  ['world','chocobo',"Chocobo's Paradise",0.071,0.148,''],
+  ['world','chocobo',"Chocobo's Forest",0.663,0.759,'','mist'],
+  ['world','chocobo',"Chocobo's Lagoon",0.369,0.868,'','i-choco-lagoon'],
+  ['world','chocobo',"Chocobo's Paradise",0.071,0.148,'','i-choco-paradise'],
 
-  ['world','qu',"Qu's Marsh — Mist",0.589,0.749,''],
-  ['world','qu',"Qu's Marsh — Outer",0.649,0.345,''],
-  ['world','qu',"Qu's Marsh — Forgotten",0.210,0.463,''],
-  ['world','qu',"Qu's Marsh — Lost",0.184,0.746,''],
+  ['world','qu',"Qu's Marsh — Mist",0.589,0.749,'','mist'],
+  ['world','qu',"Qu's Marsh — Outer",0.649,0.345,'','outer'],
+  ['world','qu',"Qu's Marsh — Forgotten",0.210,0.463,'','forgotten'],
+  ['world','qu',"Qu's Marsh — Lost",0.184,0.746,'','i-qu-lost'],
 
-  ['world','special','Mognet Central',0.671,0.214,''],
+  ['world','special','Mognet Central',0.671,0.214,'','i-mognet'],
 
   // Tàu Blue Narciss đáp được cả bãi biển, nên ba điểm dưới là chỗ cập
   // bến ƯỚC LƯỢNG cho ba lục địa còn lại — kéo về đúng bãi thật.
-  ['world','port','Bãi đáp — Outer',0.503,0.404,'Vị trí ước lượng, kéo chỉnh'],
-  ['world','port','Bãi đáp — Forgotten',0.196,0.700,'Vị trí ước lượng, kéo chỉnh'],
-  ['world','port','Bãi đáp — Lost',0.272,0.333,'Vị trí ước lượng, kéo chỉnh'],
+  ['world','port','Bãi đáp — Outer',0.503,0.404,'Vị trí ước lượng, kéo chỉnh','outer'],
+  ['world','port','Bãi đáp — Forgotten',0.196,0.700,'Vị trí ước lượng, kéo chỉnh','i-qu-lost'],
+  ['world','port','Bãi đáp — Lost',0.272,0.333,'Vị trí ước lượng, kéo chỉnh','i-shimmering'],
   ],
 
   /* Luật nối tuyến riêng của FFIX. Trước đây engine hardcode chuỗi

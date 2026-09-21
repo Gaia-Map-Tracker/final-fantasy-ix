@@ -311,6 +311,8 @@ textarea{resize:vertical; min-height:62px}
         <button class="btn" id="portBtn">⚓ Nối bến tàu</button>
       </span>
       <span class="grp" id="autoGrp">
+        <button class="btn" id="cleanBtn"
+                title="Xoá tuyến đi bộ nối hai khối đất khác nhau">🧹 Dọn tuyến lố</button>
         <button class="btn" id="autoBtn">⚡ Nối gần</button>
         <input type="number" id="autoR" value="12" min="2" max="60" step="1"
                title="Bán kính nối, tính theo % chiều rộng bản đồ">
@@ -454,7 +456,28 @@ function save(key, val){
   try{ localStorage.setItem(key, JSON.stringify(val)); } catch{ /* chế độ riêng tư */ }
 }
 const seedMarkers = () =>
-  GAME.seed.map((r,i) => ({ id:i+1, map:r[0], cat:r[1], name:r[2], x:r[3], y:r[4], note:r[5] }));
+  GAME.seed.map((r,i) => ({ id:i+1, map:r[0], cat:r[1], name:r[2], x:r[3], y:r[4],
+                            note:r[5], land:r[6] }));
+
+/* Hai điểm có đi bộ sang nhau được không. Bộ dữ liệu khai "khối đất" cho
+   từng điểm; khác khối thì phải tàu hoặc phi thuyền.
+
+   Điểm do người dùng tự thêm KHÔNG có khối đất — lúc đó trả về true, để
+   engine đừng chặn thứ nó không biết. Thà nối lố một đường dễ xoá còn hơn
+   âm thầm từ chối nối mà không nói vì sao. */
+const sameLand = (a, b) => !a || !b || !a.land || !b.land || a.land === b.land;
+
+/* Marker lưu từ bản cũ không có trường land. Bù lại theo TÊN — tên là thứ
+   ổn định nhất giữa các bản, id thì người dùng biên tập là đổi. Điểm người
+   dùng tự đặt không khớp tên nào thì để trống, và sameLand() sẽ không chặn
+   nó — engine chỉ nên chắc chắn về thứ bộ dữ liệu có nói. */
+function hydrateLand(){
+  const byName = new Map((GAME.seed || []).map(r => [r[2], r[6]]).filter(x => x[1]));
+  let n = 0;
+  for (const p of markers) if (!p.land && byName.has(p.name)){ p.land = byName.get(p.name); n++; }
+  if (n) persist();
+  return n;
+}
 
 /* Cờ tính năng. Thiếu khoá thì coi như BẬT — bộ dữ liệu cũ không khai
    features vẫn chạy đủ như trước. */
@@ -463,6 +486,7 @@ const feat = k => !GAME || (GAME.features || {})[k] !== false;
 function boot(){
   const saved = load(K.data, null);
   markers = Array.isArray(saved) && saved.length ? saved : seedMarkers();
+  hydrateLand();
   edges   = load(K.edges, []) || [];
   nextId    = markers.reduce((m,p) => Math.max(m, p.id), 0) + 1;
   nextEdge  = edges.reduce((m,e) => Math.max(m, e.id), 0) + 1;
@@ -1438,22 +1462,65 @@ function autoConnect(pctIn){
   const has = new Set(edges.filter(e => e.map === curMap)
                            .map(e => Math.min(e.a,e.b) + ':' + Math.max(e.a,e.b)));
   const add = [];
+  let skipped = 0;
   for (let i = 0; i < pts.length; i++){
     for (let j = i+1; j < pts.length; j++){
       const k = Math.min(pts[i].id,pts[j].id) + ':' + Math.max(pts[i].id,pts[j].id);
       if (has.has(k)) continue;
-      if (dist(pts[i], pts[j]) <= R) add.push([pts[i].id, pts[j].id]);
+      if (dist(pts[i], pts[j]) > R) continue;
+      /* Gần nhau trên ảnh không có nghĩa là đi bộ sang nhau được: hai bờ
+         một eo biển thì sát nhau mà phải có tàu. Đếm sau khi đã lọc bán
+         kính, để con số báo ra là số cặp THẬT SỰ bị bỏ, không phải mọi
+         cặp khác khối đất trên bản đồ. */
+      if (!sameLand(pts[i], pts[j])) { skipped++; continue; }
+      add.push([pts[i].id, pts[j].id]);
     }
   }
-  if (!add.length){ alert('Không có cặp điểm nào trong bán kính ' + pct + '%.'); return; }
-  if (!confirm('Tạo ' + add.length + ' tuyến đi bộ giữa các điểm cách nhau dưới ' + pct + '% chiều rộng bản đồ?\n\n' +
-               'Máy không phân biệt được đất liền và biển, nên sẽ có đường nối lố qua biển — xoá bằng cách bấm lên tuyến đó.')) return;
+  const note = skipped
+    ? '\n\nĐã bỏ qua ' + skipped + ' cặp nằm trên hai khối đất khác nhau — chỗ đó phải đi tàu hoặc phi thuyền.'
+    : '';
+  if (!add.length){ alert('Không có cặp điểm nào trong bán kính ' + pct + '%.' + note); return; }
+  if (!confirm('Tạo ' + add.length + ' tuyến đi bộ giữa các điểm cách nhau dưới ' + pct + '% chiều rộng bản đồ?' + note +
+               '\n\nĐường vẽ là đường thẳng, nên vài tuyến sẽ cắt ngang vịnh dù hai đầu vẫn cùng một khối đất. ' +
+               'Bấm lên tuyến để xoá.')) return;
   pushUndo('nối gần (' + add.length + ' tuyến)');
   const walk = (GAME.rules || {}).walkLink || GAME.links[0].id;
   for (const [a,b] of add) edges.push({ id:nextEdge++, map:curMap, a, b, type:walk });
   persistE(); refresh();
 }
 $('#autoBtn').addEventListener('click', () => autoConnect());
+
+/* Dọn những tuyến ĐI BỘ nối hai khối đất khác nhau — thứ mà "⚡ Nối gần"
+   của bản cũ đẻ ra khi nó còn chưa biết đâu là biển. Chỉ đụng tuyến đi bộ:
+   tuyến tàu và phi thuyền vượt biển là chuyện bình thường, và tuyến người
+   dùng tự nối tay thì họ có lý do của họ. */
+function cleanCrossLand(){
+  const walk  = (GAME.rules || {}).walkLink;
+  const byId  = new Map(markers.map(p => [p.id, p]));
+  const bad = edges.filter(e => {
+    if (e.map !== curMap) return false;
+    if (walk && e.type !== walk) return false;
+    const A = byId.get(e.a), B = byId.get(e.b);
+    return A && B && A.land && B.land && A.land !== B.land;
+  });
+  if (!bad.length){
+    alert('Không có tuyến đi bộ nào nối hai khối đất khác nhau.\n\n' +
+          'Lưu ý: tuyến cắt ngang vịnh mà hai đầu vẫn cùng một khối đất thì ' +
+          'đi bộ được (vòng quanh vịnh), chỉ là đường vẽ thẳng nên trông lạ.');
+    return;
+  }
+  const list = bad.slice(0, 12).map(e =>
+    '· ' + byId.get(e.a).name + ' ↔ ' + byId.get(e.b).name).join('\n');
+  if (!confirm('Tìm thấy ' + bad.length + ' tuyến đi bộ băng qua biển:\n\n' + list +
+               (bad.length > 12 ? '\n· … và ' + (bad.length - 12) + ' tuyến nữa' : '') +
+               '\n\nXoá hết? (hoàn tác được bằng ↶)')) return;
+  pushUndo('dọn ' + bad.length + ' tuyến lố');
+  const ids = new Set(bad.map(e => e.id));
+  edges = edges.filter(e => !ids.has(e.id));
+  persistE(); refresh();
+  alert('Đã xoá ' + bad.length + ' tuyến.');
+}
+$('#cleanBtn').addEventListener('click', cleanCrossLand);
 
 /* Nối đầy đủ các điểm thuộc nhóm "đầu mối" với nhau, cộng thêm vài
    tuyến đặc biệt. LUẬT NẰM Ở BỘ DỮ LIỆU GAME (GAME.rules), engine
