@@ -220,6 +220,13 @@ Các địa danh trên bản đồ thế giới đã được đặt sẵn theo 
 Muốn bỏ hết làm lại từ đầu: xoá khoá `ffmap.v2.ffix.data` trong localStorage
 (DevTools → Application → Local Storage), tải lại trang.
 
+## Làm tiếp gì
+
+Xem [ROADMAP.md](ROADMAP.md): việc còn lại (tuyến qua gate, địa hình chặn đường),
+những con số đã đo rồi khỏi đo lại, và mấy cái bẫy đã cắn — canvas bị taint trên
+`file://`, Safari hỏng IndexedDB ở tầng giao dịch, nút đặt trong `#viewport`
+không nhận được `click`.
+
 ## Đưa lên web thì nhớ
 
 Repo này chỉ có **engine** — phần mã tự viết. Ảnh bản đồ không nằm trong repo,
