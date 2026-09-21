@@ -6,6 +6,26 @@ biết trước được gì".
 
 Cập nhật: 2026-09-21
 
+## ĐANG LÀM
+
+| | |
+|---|---|
+| Nhánh | `main` · commit `21e3f57` · đã đẩy hết |
+| Handoff đầu mạch | [docs/handoff/HANDOFF-2026-09-21-nen-tang-da-game.md](docs/handoff/HANDOFF-2026-09-21-nen-tang-da-game.md) |
+| Bài học | [docs/retrospective/lessons/LESSON-2026-09-21-nen-tang-da-game.md](docs/retrospective/lessons/LESSON-2026-09-21-nen-tang-da-game.md) |
+| **Việc tiếp theo** | ① repo sang tiếng Anh → ② i18n app EN/VI → ③ định tuyến |
+| **Chờ chủ dự án** | license cho repo (đã public); có đẩy `docs/handoff` + `docs/retrospective` lên repo public không; đổi tên spec thành `SPEC-ROUTING.md` |
+
+🔴 **Working tree đang bẩn CÓ CHỦ Ý — đừng dọn.** 4 file sửa dở chưa commit
+(`README.md` đã dịch xong sang tiếng Anh, `docs/SPEC-DINH-TUYEN.md` đã thêm 2
+chốt cuối, và `tools/check.mjs` + `tools/analyze-map.mjs` **đang hỏng**). Chủ dự
+án bảo giữ nguyên. Bản trên GitHub thì vẫn nguyên vẹn và chạy tốt.
+
+🔴 **Chờ chủ dự án nói "làm đi" mới code.** Phiên 21/09 đã phải bị nhắc hai lần.
+
+⚠️ Chạy công cụ trong lúc chờ thì thêm biến môi trường:
+`PLAYWRIGHT_PATH="$HOME/.nvm/versions/node/v22.23.2/lib/node_modules/playwright/index.js"`
+
 ---
 
 ## Đã làm được rồi — đừng dựng lại
