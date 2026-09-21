@@ -17,7 +17,7 @@ Cập nhật: 2026-09-21
 | **Chờ chủ dự án** | license cho repo (đã public); có đẩy `docs/handoff` + `docs/retrospective` lên repo public không; đổi tên spec thành `SPEC-ROUTING.md` |
 
 🔴 **Working tree đang bẩn CÓ CHỦ Ý — đừng dọn.** 4 file sửa dở chưa commit
-(`README.md` đã dịch xong sang tiếng Anh, `docs/SPEC-DINH-TUYEN.md` đã thêm 2
+(`README.md` đã dịch xong sang tiếng Anh, `docs/SPEC-ROUTING.md` đã thêm 2
 chốt cuối, và `tools/check.mjs` + `tools/analyze-map.mjs` **đang hỏng**). Chủ dự
 án bảo giữ nguyên. Bản trên GitHub thì vẫn nguyên vẹn và chạy tốt.
 
@@ -47,7 +47,7 @@ chốt cuối, và `tools/check.mjs` + `tools/analyze-map.mjs` **đang hỏng**)
 
 Phần chỉ đường (đường cong bám địa hình, bốn chế độ di chuyển kiểu Google
 Maps, luật đáp phi thuyền, bảng địa hình Chocobo) đã bàn xong và chốt ở
-**[docs/SPEC-DINH-TUYEN.md](docs/SPEC-DINH-TUYEN.md)**. Đọc file đó trước
+**[docs/SPEC-ROUTING.md](docs/SPEC-ROUTING.md)**. Đọc file đó trước
 khi động vào mục 1–4 dưới đây.
 
 ## Bốn việc còn lại, theo thứ tự đáng làm

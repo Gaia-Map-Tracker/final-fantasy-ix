@@ -10,11 +10,11 @@ Playwright trên trình duyệt thật. Đọc bản bàn giao này với mức 
 
 ## Đọc 30 giây
 
-- **Chờ anh quyết:** license cho repo (đã public, mời người đóng góp mà chưa có
-  license = mặc định "all rights reserved"); có đẩy thư mục `docs/handoff` và
-  `docs/retrospective` lên repo public không.
+- **Không còn gì chờ quyết định.** Ba việc treo lúc kết phiên đã chốt hết ngay
+  sau đó: MIT license (đã thêm), đẩy `docs/handoff` + `docs/retrospective` lên
+  repo public (đồng ý), đổi tên spec thành `SPEC-ROUTING.md` (đã đổi).
 - **Code được ngay khi được lệnh:** ① dịch nốt repo sang tiếng Anh → ② i18n app
-  EN/VI → ③ định tuyến theo `docs/SPEC-DINH-TUYEN.md`.
+  EN/VI → ③ định tuyến theo `docs/SPEC-ROUTING.md`.
 - 🔴 **KHÔNG tự ý code.** Chủ dự án đã phải nhắc **hai lần** trong phiên này.
   Chờ câu "làm đi" rõ ràng.
 - 🔴 **Working tree đang bẩn có chủ ý** — 4 file sửa dở, hai trong số đó ĐANG
@@ -43,7 +43,7 @@ Từ repo chưa có commit nào → nền tảng bản đồ đa game, **14 comm
 | Bảng màu theo lục địa | `6f680e2` | |
 | Spec định tuyến | `21e3f57` | |
 
-**Quyết định lớn đã chốt** (chi tiết ở `docs/SPEC-DINH-TUYEN.md`):
+**Quyết định lớn đã chốt** (chi tiết ở `docs/SPEC-ROUTING.md`):
 - Định tuyến do **máy sinh**, ship sẵn trong `data/`; người dùng không tự dựng
 - Chỉ đường **kiểu Google Maps**: tab chế độ 🚶 🐤 🚢 ✈️, mỗi chế độ một hành trình
 - Tàu **đậu mọi bờ biển** ⇒ không cần mạng tuyến tàu cố định
@@ -58,13 +58,13 @@ Từ repo chưa có commit nào → nền tảng bản đồ đa game, **14 comm
 
 ---
 
-## 1. Việc chờ quyết định — kèm cái giá
+## 1. Ba việc từng chờ quyết định — đã chốt hết
 
-| Việc | Phương án | Giá |
-|---|---|---|
-| **License** | MIT (phổ biến nhất cho repo mời đóng góp) · Apache-2.0 (có điều khoản sáng chế) · không có license | Không license ⇒ người khác **không được phép** fork/sửa hợp pháp, trái với ý "cho mọi người góp ý và phát triển". Cần ghi rõ license chỉ áp cho **code**, không áp cho art trong `maps/` |
-| **Đẩy `docs/handoff` + `docs/retrospective` lên repo public?** | Đẩy · giữ local · chuyển sang `.claude/` | Đẩy thì minh bạch nhưng làm rối repo mà người ngoài đọc, và nó viết bằng tiếng Việt trong khi repo đang chuyển sang tiếng Anh |
-| **Tên file spec** | Đổi `SPEC-DINH-TUYEN.md` → `SPEC-ROUTING.md` | Đổi thì đồng bộ với repo tiếng Anh; phải sửa link trong `README.md` và `ROADMAP.md` |
+| Việc | Chốt |
+|---|---|
+| **License** | ✅ **MIT**, file `LICENSE` ở gốc repo. Chủ sở hữu ghi là "Leon" (lấy từ `git config user.name`) — đổi được nếu muốn tên khác. Kèm mục *Note on game assets*: license chỉ áp cho **code**, art của Square Enix không nằm trong repo và không được license này che |
+| **Đẩy `docs/handoff` + `docs/retrospective` lên public** | ✅ Đồng ý đẩy |
+| **Tên file spec** | ✅ Đã đổi `SPEC-DINH-TUYEN.md` → **`SPEC-ROUTING.md`**, sửa 10 chỗ trỏ tới nó trong `ROADMAP.md` và chính handoff này |
 
 ---
 
@@ -172,7 +172,7 @@ Chủ dự án nói nguyên văn: *"cứ để đó đi… bây giờ cứ giữ
 | File | Trạng thái |
 |---|---|
 | `README.md` | Đã dịch xong sang tiếng Anh (231 dòng) — **chưa commit** |
-| `docs/SPEC-DINH-TUYEN.md` | Đã thêm 2 chốt cuối + mục giao diện song ngữ — **chưa commit** |
+| ~~`docs/SPEC-ROUTING.md`~~ | ✅ đã commit cùng lúc đổi tên file |
 | `tools/check.mjs` | 🔴 **HỎNG** — bỏ đường dẫn hardcode, thay bằng dò `npm root -g`, nhưng npm là homebrew còn playwright ở nvm nên không tìm ra |
 | `tools/analyze-map.mjs` | 🔴 **HỎNG** — cùng lý do |
 
@@ -194,7 +194,7 @@ Email `quang4dev@gmail.com` nằm trong tác giả của cả 14 commit đã đ�
 ## 6. Nợ ghi ở đâu
 
 - `ROADMAP.md` — 4 việc còn lại, số đã đo, bẫy đã cắn
-- `docs/SPEC-DINH-TUYEN.md` — toàn bộ spec định tuyến, có nguồn wiki
+- `docs/SPEC-ROUTING.md` — toàn bộ spec định tuyến, có nguồn wiki
 - Không có BACKLOG/REMINDERS riêng
 
 ---
@@ -202,12 +202,12 @@ Email `quang4dev@gmail.com` nằm trong tác giả của cả 14 commit đã đ�
 ## 7. Việc tiếp theo, theo thứ tự
 
 1. **Repo sang tiếng Anh** — README xong (chưa commit), còn `ROADMAP.md`,
-   `docs/SPEC-DINH-TUYEN.md`, `maps/README.md`, và comment trong
+   `docs/SPEC-ROUTING.md`, `maps/README.md`, và comment trong
    `index.html` / `data/*.js` / `tools/*.mjs` (~175 dòng comment)
 2. **i18n app EN/VI** — gom chuỗi UI vào bảng, nút đổi, nhớ lựa chọn.
    `data/ffix.js` phải khai song ngữ cho `cats[].name`, `links[].name`,
    `maps[].name`, và ghi chú của 5 điểm. Tên địa danh giữ nguyên tiếng Anh.
    **Làm TRƯỚC định tuyến**, vì định tuyến đẻ thêm cả đống chuỗi mới.
-3. **Định tuyến** theo `docs/SPEC-DINH-TUYEN.md`
+3. **Định tuyến** theo `docs/SPEC-ROUTING.md`
 
 🔴 **Chờ chủ dự án nói "làm đi" mới bắt đầu.**

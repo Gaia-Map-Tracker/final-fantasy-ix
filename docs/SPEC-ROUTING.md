@@ -139,13 +139,24 @@ ship vào `data/`.
 thành núi** — lấy mẫu ngay giữa Alexandria cũng ra "núi". Phải lọc ký hiệu
 và viền trước khi tin kết quả.
 
-## 9. Còn mở
+## 9. Hai chốt cuối
 
-- **Người dùng có khai hạng Chocobo đang có không?** Không khai thì app
-  tính theo hạng cao nhất rồi ghi chú "chặng này cần Chocobo đỏ" — đơn
-  giản hơn, và người chơi tự biết mình có gì. Khai thì đúng hơn với người
-  đang chơi dở, nhưng thêm một thứ phải chọn. **Mặc định đề xuất: không khai.**
-- Mật độ mạng tuyến đi bộ: nối mỗi điểm với mấy hàng xóm là vừa?
+**Không bắt người dùng khai hạng Chocobo.** App tính theo hạng cao nhất,
+rồi ghi chú ngay trên chặng: *"chặng này cần Chocobo đỏ"*. Người chơi tự
+biết mình đang có con nào, khỏi thêm một ô phải chọn.
+
+**Mạng tuyến thưa: mỗi điểm nối 2–3 hàng xóm.** Đủ để có một tuyến chính
+và vài tuyến phụ cho người dùng so — đúng kiểu Google Maps gợi ý một
+đường chính kèm hai đường thay thế. Nối dày hơn chỉ làm bản đồ rối mà
+chẳng ai đi.
+
+## 10. Giao diện song ngữ
+
+App có nút đổi **EN / VI**. Tài liệu trong repo giữ nguyên tiếng Việt.
+
+Việc này nên làm **TRƯỚC** phần định tuyến: định tuyến sẽ đẻ thêm cả đống
+chuỗi mới (tab chế độ, tên chặng, lý do không đi được), làm i18n sau thì
+phải quét lại toàn bộ một lần nữa.
 
 ## Nguồn tra cứu
 
